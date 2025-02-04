@@ -5,16 +5,39 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { v1 as uuidv1 } from "uuid"
-import { updateSessionData } from "@/utils/sessionData";
+import { updateSessionData, getSessionData } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
+
 export default function ConsentPage() {
   const [hasReadInfo, setHasReadInfo] = useState(false)
   const router = useRouter()
+
+  const handleSync = async () => {
+    try {
+      const sessionData = getSessionData();
+      if (!sessionData) {
+        console.error("No session data available!");
+        return;
+      }
+      const response = await fetch("/api/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(sessionData),
+      });
+      const result = await response.json();
+      console.log("Sync result:", result);
+    } catch (error) {
+      console.error("Error syncing session data:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4 bg-background">
       <div className="absolute top-4 right-4">
         <Button
-          onClick={() => console.log("Upload local data clicked")}
+          onClick={handleSync}
           variant="secondary"
           className="text-sm"
         >

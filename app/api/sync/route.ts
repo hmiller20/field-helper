@@ -15,33 +15,23 @@ if (!dbName) {
   throw new Error("Missing environment variable: MONGODB_DB");
 }
 
-// Use a cached connection object to improve performance.
-let cachedClient: MongoClient | null = null;
-let cachedDb: Db | null = null;
-
 async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
-  if (cachedClient && cachedDb) {
-    return { client: cachedClient, db: cachedDb };
-  }
-
-  // Optionally wrap connect() in try/catch to log connection errors.
+  // Connect to the database
   const client = new MongoClient(uri);
   try {
     await client.connect();
-  } catch (connErr: unknown) {
+  } catch (connErr) {
     console.error("MongoDB connection error:", connErr);
     throw connErr;
   }
   const db = client.db(dbName);
-  cachedClient = client;
-  cachedDb = db;
   return { client, db };
 }
 
 export async function POST(request: Request) {
   try {
     // Parse and log the session data from the request body.
-    const sessionData = (await request.json()) as unknown;
+    const sessionData: unknown = await request.json();
     console.log("API /sync POST: received session data:", sessionData);
     if (typeof sessionData !== "object" || sessionData === null) {
       return NextResponse.json({ error: "Invalid session data" }, { status: 400 });
@@ -63,7 +53,7 @@ export async function POST(request: Request) {
     const result = await collection.insertOne(newRecord);
 
     return NextResponse.json({ success: true, insertedId: result.insertedId });
-  } catch (error: unknown) {
+  } catch (error) {
     console.error("Error syncing session data:", error);
     let errorMessage = "Failed to sync session data";
     if (error instanceof Error) {

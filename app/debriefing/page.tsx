@@ -30,7 +30,7 @@ export default function DebriefingPage() {
       <Card className="w-full max-w-2xl">
         <CardContent className="p-6 flex flex-col items-center gap-8">
           <p className="text-center text-lg sm:text-xl leading-relaxed">
-            That&apos;s it! You&apos;re all done. Thanks for contributing to our study. If you want, you can view the debriefing form below.
+            That concludes the study. Thanks for participating. If you want, you can view the debriefing form below.
           </p>
 
           <Dialog>

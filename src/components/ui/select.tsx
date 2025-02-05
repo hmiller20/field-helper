@@ -4,7 +4,7 @@ import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 
 // Utility to join class names
-function cn(...classes: string[]) {
+function cn(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 

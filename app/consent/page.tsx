@@ -66,11 +66,11 @@ export default function ConsentPage() {
               <DialogHeader>
                 <DialogTitle>Information Sheet</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Study Information</h2>
-                <p>[Your study information and consent details go here]</p>
-                {/* Add more sections as needed */}
-              </div>
+              <iframe
+                src="/old-consent-form.pdf"
+                title="Information Sheet PDF"
+                className="w-full h-[600px] border-none"
+              />
             </DialogContent>
           </Dialog>
 

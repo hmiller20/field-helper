@@ -18,7 +18,7 @@ if (!dbName) {
 let cachedClient: MongoClient | null = null;
 let cachedDb: Db | null = null;
 
-async function connectToDatabase() {
+async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
   if (cachedClient && cachedDb) {
     return { client: cachedClient, db: cachedDb };
   }
@@ -27,7 +27,7 @@ async function connectToDatabase() {
   const client = new MongoClient(uri);
   try {
     await client.connect();
-  } catch (connErr) {
+  } catch (connErr: unknown) {
     console.error("MongoDB connection error:", connErr);
     throw connErr;
   }
@@ -40,22 +40,22 @@ async function connectToDatabase() {
 export async function POST(request: Request) {
   try {
     // Parse and log the session data from the request body.
-    const sessionData = await request.json();
+    const sessionData = (await request.json()) as unknown;
     console.log("API /sync POST: received session data:", sessionData);
-
-    if (!sessionData || typeof sessionData !== "object") {
+    if (typeof sessionData !== "object" || sessionData === null) {
       return NextResponse.json({ error: "Invalid session data" }, { status: 400 });
     }
+    const validSessionData = sessionData as Record<string, unknown>;
 
     const { db } = await connectToDatabase();
 
     // Use a single minimal collection for all sync logs.
-    const collection = db.collection("session_logs");
+    const collection = db.collection<Record<string, unknown>>("session_logs");
 
     // Add a category and timestamp for better organization.
     const newRecord = {
       category: "session_sync",
-      ...sessionData,
+      ...validSessionData,
       syncDate: new Date(),
     };
 

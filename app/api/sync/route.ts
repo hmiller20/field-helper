@@ -1,7 +1,7 @@
 "use server";
 
 import { NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
+import { MongoClient, Db } from "mongodb";
 
 // Ensure you have these environment variables set.
 const uri = process.env.MONGODB_URI as string;
@@ -16,7 +16,7 @@ if (!dbName) {
 
 // Use a cached connection object to improve performance.
 let cachedClient: MongoClient | null = null;
-let cachedDb: any = null;
+let cachedDb: Db | null = null;
 
 async function connectToDatabase() {
   if (cachedClient && cachedDb) {
@@ -62,13 +62,13 @@ export async function POST(request: Request) {
     const result = await collection.insertOne(newRecord);
 
     return NextResponse.json({ success: true, insertedId: result.insertedId });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error syncing session data:", error);
-    console.error(error.stack); // Log full error stack for more detail
-    // For debugging purposes, we log and return the actual error message.
-    return NextResponse.json(
-      { error: error.message || "Failed to sync session data" },
-      { status: 500 }
-    );
+    let errorMessage = "Failed to sync session data";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      console.error(error.stack);
+    }
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 } 

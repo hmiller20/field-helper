@@ -41,6 +41,7 @@ export default function DebriefingPage() {
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
+                <DialogTitle>Debriefing Information</DialogTitle>
               </DialogHeader>
               <iframe
                 src="/old-debriefing-form.pdf"

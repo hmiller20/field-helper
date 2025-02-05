@@ -41,9 +41,7 @@ const DrawingPage: React.FC = () => {
     return () => window.removeEventListener("resize", resizeCanvas);
   }, []);
 
-  const startDrawing = (
-    e: React.MouseEvent<HTMLCanvasElement, MouseEvent>
-  ) => {
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (showModal) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -53,9 +51,7 @@ const DrawingPage: React.FC = () => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     isDrawingRef.current = true;
-    // Initialize shape points array
-    shapePointsRef.current = [];
-    shapePointsRef.current.push({ x, y });
+    shapePointsRef.current = [{ x, y }];
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.strokeStyle = "#000";
@@ -63,30 +59,26 @@ const DrawingPage: React.FC = () => {
     ctx.moveTo(x, y);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => {
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current) return;
     if (showModal) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Append current point to our shape points tracker
+    // Append current point to our shape points tracker and draw the line
     shapePointsRef.current.push({ x, y });
-    // Continue drawing the line to the current cursor
     ctx.lineTo(x, y);
     ctx.stroke();
   };
 
   const stopDrawing = () => {
-    // Only save the shape if drawing was in progress
     if (isDrawingRef.current) {
       isDrawingRef.current = false;
-      // Save current shape if it has at least 3 points
       if (shapePointsRef.current.length >= 3) {
         shapesRef.current.push([...shapePointsRef.current]);
       }
@@ -143,7 +135,6 @@ const DrawingPage: React.FC = () => {
   };
 
   const doneDrawing = () => {
-    // If drawing is in progress, finish it and save the shape
     if (isDrawingRef.current) {
       stopDrawing();
     }
@@ -211,10 +202,10 @@ const DrawingPage: React.FC = () => {
             ref={canvasRef}
             className="w-full h-full bg-sky-100"
             style={{ touchAction: "none" }}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseOut={stopDrawing}
+            onPointerDown={startDrawing}
+            onPointerMove={draw}
+            onPointerUp={stopDrawing}
+            onPointerCancel={stopDrawing}
           />
           {/* Scale object: simple tree */}
           <div className="absolute bottom-0 right-4" style={{ pointerEvents: "none" }}>

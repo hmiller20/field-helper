@@ -22,8 +22,15 @@ async function connectToDatabase() {
   if (cachedClient && cachedDb) {
     return { client: cachedClient, db: cachedDb };
   }
+
+  // Optionally wrap connect() in try/catch to log connection errors.
   const client = new MongoClient(uri);
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (connErr) {
+    console.error("MongoDB connection error:", connErr);
+    throw connErr;
+  }
   const db = client.db(dbName);
   cachedClient = client;
   cachedDb = db;
@@ -32,8 +39,9 @@ async function connectToDatabase() {
 
 export async function POST(request: Request) {
   try {
-    // Parse the session data from the request body.
+    // Parse and log the session data from the request body.
     const sessionData = await request.json();
+    console.log("API /sync POST: received session data:", sessionData);
 
     if (!sessionData || typeof sessionData !== "object") {
       return NextResponse.json({ error: "Invalid session data" }, { status: 400 });
@@ -56,7 +64,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, insertedId: result.insertedId });
   } catch (error: any) {
     console.error("Error syncing session data:", error);
+    console.error(error.stack); // Log full error stack for more detail
     // For debugging purposes, we log and return the actual error message.
-    return NextResponse.json({ error: error.message || "Failed to sync session data" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to sync session data" },
+      { status: 500 }
+    );
   }
 } 

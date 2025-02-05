@@ -1,4 +1,5 @@
 "use server";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { NextResponse } from "next/server";
 import { MongoClient, Db } from "mongodb";

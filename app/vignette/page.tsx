@@ -27,14 +27,14 @@ const Vignettes = [
 export default function VignettePage() {
   const router = useRouter()
   const [vignette, setVignette] = useState<typeof Vignettes[number] | null>(null)
+  const [visibleWordCount, setVisibleWordCount] = useState(0)
+  const wordDelay = 150
 
   useEffect(() => {
-    // Try to load the vignette from local storage
     const stored = localStorage.getItem("assignedVignette")
     if (stored) {
       setVignette(JSON.parse(stored))
     } else {
-      // Randomly select a vignette and store it for future visits
       const randomIndex = Math.floor(Math.random() * Vignettes.length)
       const selected = Vignettes[randomIndex]
       setVignette(selected)
@@ -42,20 +42,64 @@ export default function VignettePage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!vignette) return
+    setVisibleWordCount(0)
+    const wordsArray = vignette.text.split(" ")
+    let count = 0
+    const interval = setInterval(() => {
+      count++
+      setVisibleWordCount(count)
+      if (count >= wordsArray.length) {
+        clearInterval(interval)
+      }
+    }, wordDelay)
+    return () => clearInterval(interval)
+  }, [vignette, wordDelay])
+
   if (!vignette) return <div>Loading...</div>
+
+  const conditionMapping: Record<string, number> = {
+    dominance: 1,
+    prestige: 2,
+    virtue: 3,
+    lowStatus: 4,
+  };
 
   updateSessionData({
     vignette: vignette.name,
-  })
+    conditionValue: conditionMapping[vignette.name],
+  });
+
+  const words = vignette.text.split(" ");
+  const isVignetteComplete = visibleWordCount >= words.length;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-2xl">
         <CardContent className="p-6 flex flex-col items-center gap-8">
-          <div className="text-center text-lg sm:text-xl leading-relaxed max-w-xl">{vignette.text}</div>
+          <div className="text-center text-lg sm:text-xl leading-relaxed max-w-xl">
+            {words.map((word, index) => (
+              <span
+                key={index}
+                style={{
+                  opacity: index < visibleWordCount ? 1 : 0,
+                  transition: 'opacity 0.3s ease-in-out'
+                }}
+              >
+                {word}{index !== words.length - 1 ? " " : ""}
+              </span>
+            ))}
+          </div>
 
-          <Button className="w-48 h-16 text-xl bg-[#c1e6c1] hover:bg-[#a8dba8] text-black mt-4" variant="secondary" 
-          onClick={() => router.push('/survey')}>
+          <Button
+            className={`w-48 h-16 text-xl bg-[#c1e6c1] text-black mt-4 ${
+              isVignetteComplete ? "hover:bg-[#a8dba8]" : "cursor-not-allowed pointer-events-none"
+            }`}
+            variant="secondary"
+            style={{ opacity: isVignetteComplete ? 1 : 0.5 }}
+            onClick={isVignetteComplete ? () => router.push('/survey') : undefined}
+          >
             Continue
           </Button>
         </CardContent>

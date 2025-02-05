@@ -1,6 +1,7 @@
 export interface SessionData {
   sessionId: string;
   vignette?: string;
+  conditionValue?: number;
   experimenter?: string;
   sessionNotes?: string;
   surveyResponses?: Record<string, unknown>;

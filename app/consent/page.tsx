@@ -7,9 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { v1 as uuidv1 } from "uuid"
 import { updateSessionData, getSessionData } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ConsentPage() {
   const [hasReadInfo, setHasReadInfo] = useState(false)
+  const [alertVisible, setAlertVisible] = useState(false)
   const router = useRouter()
 
   const handleSync = async () => {
@@ -28,6 +30,10 @@ export default function ConsentPage() {
       });
       const result = await response.json();
       console.log("Sync result:", result);
+      setAlertVisible(true);
+      setTimeout(() => {
+        setAlertVisible(false);
+      }, 3000);
     } catch (error) {
       console.error("Error syncing session data:", error);
     }
@@ -47,6 +53,9 @@ export default function ConsentPage() {
 
       <Card className="w-full max-w-2xl">
         <CardContent className="p-6 flex flex-col items-center gap-8">
+          {alertVisible && (
+            <Alert variant="success" message="Data upload successful!" />
+          )}
           <p className="text-center text-lg sm:text-xl leading-relaxed">
             Please read the information sheet by pressing the button below. After you have read the information sheet,
             please provide your consent by pressing the continue button.

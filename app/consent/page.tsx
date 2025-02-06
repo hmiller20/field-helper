@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { v1 as uuidv1 } from "uuid"
 import { updateSessionData, getSessionData } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert } from "@/components/ui/alert";
 
 export default function ConsentPage() {
   const [hasReadInfo, setHasReadInfo] = useState(false)

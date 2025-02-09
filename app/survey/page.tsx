@@ -53,7 +53,7 @@ const questions: Question[] = [
   },
   {
     id: "virtManip1",
-    text: "John tends to put others' needs before his own.",
+    text: "When John makes decisions, he pursues the most ethical course of action.",
     category: "manipulation",
     questionType: "likert",
   },

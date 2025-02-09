@@ -186,6 +186,7 @@ const DrawingPage: React.FC = () => {
             <DialogDescription className="text-lg text-black">
               Now, in between the house and the tree, please draw the outline of John, the person you just read about.
               It should be a simple outline—kind of like a gingerbread man.
+              <b> Do NOT draw a stick figure. </b>
               Please ask the experimenter if you have any questions.
               When you are finished with your drawing, press Done.
             </DialogDescription>

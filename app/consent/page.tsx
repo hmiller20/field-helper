@@ -45,7 +45,7 @@ export default function ConsentPage() {
         <Button
           onClick={handleSync}
           variant="secondary"
-          className="text-sm"
+          className="text-sm bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 shadow-sm transition-colors"
         >
           Upload Local Data
         </Button>

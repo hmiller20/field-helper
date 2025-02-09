@@ -28,7 +28,7 @@ export default function VignettePage() {
   const router = useRouter()
   const [vignette, setVignette] = useState<typeof Vignettes[number] | null>(null)
   const [visibleWordCount, setVisibleWordCount] = useState(0)
-  const wordDelay = 150
+  const wordDelay = 225
 
   useEffect(() => {
     const stored = localStorage.getItem("assignedVignette")
@@ -78,7 +78,7 @@ export default function VignettePage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-2xl">
         <CardContent className="p-6 flex flex-col items-center gap-8">
-          <div className="text-center text-lg sm:text-xl leading-relaxed max-w-xl">
+          <div className="text-left text-lg sm:text-xl leading-relaxed max-w-xl">
             {words.map((word, index) => (
               <span
                 key={index}

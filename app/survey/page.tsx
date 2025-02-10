@@ -131,8 +131,8 @@ export default function SurveyPage() {
                     <SelectContent>
                       {question.id === "gender" ? (
                         <>
-                          <SelectItem value="0">Male</SelectItem>
-                          <SelectItem value="1">Female</SelectItem>
+                          <SelectItem value="0">Man</SelectItem>
+                          <SelectItem value="1">Woman</SelectItem>
                           <SelectItem value="2">Other</SelectItem>
                           <SelectItem value="3">Prefer not to say</SelectItem>
                         </>

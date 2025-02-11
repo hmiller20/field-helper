@@ -7,11 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { v1 as uuidv1 } from "uuid"
 import { updateSessionData, getSessionData } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
-import { Alert } from "@/components/ui/alert";
+import { ToastProvider, Toast, ToastDescription, ToastViewport } from "@/components/ui/toast";
 
 export default function ConsentPage() {
   const [hasReadInfo, setHasReadInfo] = useState(false)
-  const [alertVisible, setAlertVisible] = useState(false)
+  const [toastOpen, setToastOpen] = useState(false)
   const router = useRouter()
 
   const handleSync = async () => {
@@ -30,9 +30,9 @@ export default function ConsentPage() {
       });
       const result = await response.json();
       console.log("Sync result:", result);
-      setAlertVisible(true);
+      setToastOpen(true);
       setTimeout(() => {
-        setAlertVisible(false);
+        setToastOpen(false);
       }, 3000);
     } catch (error) {
       console.error("Error syncing session data:", error);
@@ -40,65 +40,75 @@ export default function ConsentPage() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 bg-background">
-      <div className="absolute top-4 right-4">
-        <Button
-          onClick={handleSync}
-          variant="secondary"
-          className="text-sm bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 shadow-sm transition-colors"
-        >
-          Upload Local Data
-        </Button>
-      </div>
-
-      <Card className="w-full max-w-2xl">
-        <CardContent className="p-6 flex flex-col items-center gap-8">
-          {alertVisible && (
-            <Alert variant="success" message="Data upload successful!" />
-          )}
-          <p className="text-center text-lg sm:text-xl leading-relaxed">
-            Please read the information sheet by pressing the button below. After you have read the information sheet,
-            please provide your consent by pressing the continue button.
-          </p>
-
-          <Dialog
-            onOpenChange={(open) => {
-              if (!open) setHasReadInfo(true)
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button className="w-48 h-16 text-xl bg-[#ffeeb2] hover:bg-[#ffe699] text-black" variant="secondary">
-                Consent Form
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Information Sheet</DialogTitle>
-              </DialogHeader>
-              <iframe
-                src="/old-consent-form.pdf"
-                title="Information Sheet PDF"
-                className="w-full h-[600px] border-none"
-              />
-            </DialogContent>
-          </Dialog>
-
+    <ToastProvider>
+      <div className="min-h-screen relative flex items-center justify-center p-4 bg-background">
+        <div className="absolute top-4 right-4">
           <Button
-            className="w-48 h-16 text-xl bg-[#c1e6c1] hover:bg-[#a8dba8] text-black"
-            disabled={!hasReadInfo}
+            onClick={handleSync}
             variant="secondary"
-            onClick={() => {
-              const sessionId = uuidv1();
-              updateSessionData({ sessionId });
-              console.log("Generated session ID:", sessionId);
-              router.push('/session');
-            }}
+            className="text-sm bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 shadow-sm transition-colors"
           >
-            Continue
+            Upload Local Data
           </Button>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        <Card className="w-full max-w-2xl">
+          <CardContent className="p-6 flex flex-col items-center gap-8">
+            <p className="text-center text-lg sm:text-xl leading-relaxed">
+              Please read the information sheet by pressing the button below. After you have read the information sheet,
+              please provide your consent by pressing the continue button.
+            </p>
+
+            <Dialog
+              onOpenChange={(open) => {
+                if (!open) setHasReadInfo(true)
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button className="w-48 h-16 text-xl bg-[#ffeeb2] hover:bg-[#ffe699] text-black" variant="secondary">
+                  Consent Form
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Information Sheet</DialogTitle>
+                </DialogHeader>
+                <iframe
+                  src="/old-consent-form.pdf"
+                  title="Information Sheet PDF"
+                  className="w-full h-[600px] border-none"
+                />
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              className="w-48 h-16 text-xl bg-[#c1e6c1] hover:bg-[#a8dba8] text-black"
+              disabled={!hasReadInfo}
+              variant="secondary"
+              onClick={() => {
+                const sessionId = uuidv1();
+                updateSessionData({ sessionId });
+                console.log("Generated session ID:", sessionId);
+                router.push('/session');
+              }}
+            >
+              Continue
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+      <Toast 
+        open={toastOpen} 
+        onOpenChange={setToastOpen} 
+        duration={3000}
+        className="bg-green-100 border border-green-300 flex items-center justify-center w-[350px]"
+      >
+        <ToastDescription className="text-xl text-green-800 w-full text-center">
+          Data upload successful!
+        </ToastDescription>
+      </Toast>
+      <ToastViewport className="fixed top-4 left-1/2 transform -translate-x-1/2" />
+    </ToastProvider>
   )
 }
 

@@ -42,7 +42,7 @@ export default function DebriefingPage() {
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>That concludes the study. Thanks for participating. Please view the debriefing form below.</DialogTitle>
+                <DialogTitle>That concludes the study. Thanks for participating. Please view the debriefing form below. Then give the tablet back to the experimenter.</DialogTitle>
               </DialogHeader>
               <iframe
                 src="/old-debriefing-form.pdf"

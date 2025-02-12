@@ -10,6 +10,7 @@ export default function DebriefingPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(true);
 
   const handleSubmit = () => {
     if (password === "gingerbread") {
@@ -30,18 +31,18 @@ export default function DebriefingPage() {
       <Card className="w-full max-w-2xl">
         <CardContent className="p-6 flex flex-col items-center gap-8">
           <p className="text-center text-lg sm:text-xl leading-relaxed">
-            That concludes the study. Thanks for participating. If you want, you can view the debriefing form below.
+            That concludes the study. Thanks for participating.
           </p>
 
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="w-48 h-16 text-xl bg-[#ffeeb2] hover:bg-[#ffe699] text-black" variant="secondary">
-                Debriefing
+              <Button className="w-58 h-16 text-xl bg-[#ffeeb2] hover:bg-[#ffe699] text-black" variant="secondary">
+                View Debriefing Form Again
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Debriefing Information</DialogTitle>
+                <DialogTitle>That concludes the study. Thanks for participating. Please view the debriefing form below.</DialogTitle>
               </DialogHeader>
               <iframe
                 src="/old-debriefing-form.pdf"

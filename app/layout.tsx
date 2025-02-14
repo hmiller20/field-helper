@@ -22,7 +22,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        {/* Optionally include meta tags for theme colors */}
+        <meta name="theme-color" content="#000000" />
+      </head>
       <body>{children}</body>
     </html>
   )

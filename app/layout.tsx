@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Inter } from 'next/font/google'
+import { Inter } from "next/font/google";
 
 const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-inter', // optional CSS variable
-  // weight: ['400', '700'], // if you want specific weights
-  // display: 'swap'
-})
-
-
+  variable: '--font-inter',
+});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -28,7 +24,7 @@ export default function RootLayout({
         {/* Optionally include meta tags for theme colors */}
         <meta name="theme-color" content="#000000" />
       </head>
-      <body>{children}</body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }

@@ -21,7 +21,11 @@ const withPWA = require("next-pwa")({
     },
     ...runtimeCaching,
   ],
-  // Removed fallbacks so that the full app shell is served offline.
+  // Pre-cache the PDF so it's available offline
+  additionalManifestEntries: [
+    { url: '/old-consent-form.pdf', revision: '1' } // update revision as needed
+  ],
+  // Removed fallback so that interactive pages (the full app shell) are served offline.
 });
 
 module.exports = withPWA({

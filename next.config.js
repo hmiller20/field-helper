@@ -1,3 +1,5 @@
+const runtimeCaching = require("next-pwa/cache");
+
 const withPWA = require("next-pwa")({
   dest: "public",
   // Disable PWA in development mode.
@@ -5,6 +7,7 @@ const withPWA = require("next-pwa")({
   // Optional: automatically register the service worker and activate updates.
   register: true,
   skipWaiting: true,
+  runtimeCaching,
 });
 
 module.exports = withPWA({

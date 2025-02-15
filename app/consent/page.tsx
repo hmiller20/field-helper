@@ -15,6 +15,11 @@ export default function ConsentPage() {
   const router = useRouter()
 
   const handleSync = async () => {
+    if (!navigator.onLine) {
+      console.error("You are offline. Please connect to the internet to upload local data.")
+      // Optionally, you could display an error toast or alert here.
+      return;
+    }
     try {
       const sessionData = getSessionData();
       if (!sessionData) {

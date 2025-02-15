@@ -7,7 +7,20 @@ const withPWA = require("next-pwa")({
   // Optional: automatically register the service worker and activate updates.
   register: true,
   skipWaiting: true,
-  runtimeCaching,
+  runtimeCaching: [
+    {
+      urlPattern: /\.pdf$/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'static-pdf-assets',
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+        },
+      },
+    },
+    ...runtimeCaching,
+  ],
   fallbacks: {
     document: "/offline.html",
   }

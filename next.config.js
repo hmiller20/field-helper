@@ -4,7 +4,7 @@ const withPWA = require("next-pwa")({
   dest: "public",
   // Disable PWA in development mode.
   disable: process.env.NODE_ENV === "development",
-  // Optional: automatically register the service worker and activate updates.
+  // Automatically register the service worker and activate updates.
   register: true,
   skipWaiting: true,
   runtimeCaching: [
@@ -21,9 +21,7 @@ const withPWA = require("next-pwa")({
     },
     ...runtimeCaching,
   ],
-  fallbacks: {
-    document: "/offline.html",
-  }
+  // Removed fallbacks so that the full app shell is served offline.
 });
 
 module.exports = withPWA({

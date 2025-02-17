@@ -210,41 +210,49 @@ const DrawingPage: React.FC = () => {
           />
           {/* Scale object: simple tree */}
           <div
-            className="absolute bottom-0 right-4"
-            style={{ pointerEvents: "none", width: "20%", height: "auto" }}
+            className="absolute bottom-0 right-[0vw]"
+            style={{ 
+              pointerEvents: "none", 
+              width: "20vw", 
+              height: "100%" 
+            }}
           >
             <svg
               className="w-full h-full"
-              viewBox="0 0 40 120"
+              viewBox="-200 -100 500 500"
               preserveAspectRatio="xMidYMid meet"
             >
               {/* Tree trunk */}
-              <rect x="35" y="70" width="10" height="60" fill="saddlebrown" />
+              <rect x="35" y="340" width="65" height="470" fill="saddlebrown" />
               {/* Tree branches */}
-              <rect x="55" y="100" width="12" height="2" fill="saddlebrown" transform="rotate(225 45 100)" />
-              <rect x="35" y="105" width="12" height="2" fill="saddlebrown" transform="rotate(155 45 100)" />
+              <rect x="240" y="-30" width="100" height="15" fill="saddlebrown" transform="rotate(225 260 270)" />
+              <rect x="460" y="115" width="100" height="15" fill="saddlebrown" transform="rotate(155 260 270)" />
               {/* Tree canopy */}
-              <circle cx="40" cy="50" r="30" fill="green" stroke="green" strokeWidth="5" />
+              <circle cx="68" cy="195" r="200" fill="green" stroke="green" strokeWidth="2" />
             </svg>
           </div>
           {/* Simple house for scale */}
           <div
-            className="absolute bottom-0 left-[10%]"
-            style={{ pointerEvents: "none", width: "20%", height: "auto" }}
+            className="absolute bottom-0 left-0"
+            style={{ 
+              pointerEvents: "none", 
+              width: "40vw", 
+              height: "100%" 
+            }}
           >
             <svg
               className="w-full h-full"
-              viewBox="20 0 100 100"
-              preserveAspectRatio="xMidYMid meet"
+              viewBox="-200 -100 500 500"
+              preserveAspectRatio="xMinYMid meet"
             >
               {/* House body: tan square */}
-              <rect x="20" y="70" width="60" height="40" fill="#D2B48C" />
+              <rect x="-200" y="100" width="470" height="375" fill="#D2B48C" />
               {/* Chimney */}
-              <rect x="65" y="45" width="8" height="25" fill="#8B4513" />
+              <rect x="165" y="-30" width="50" height="100" fill="#8B4513" />
               {/* Roof */}
-              <polygon points="20,70 50,40 80,70" fill="red" />
+              <polygon points="-200,100 35,-100, 270,100" fill="red" />
               {/* Garage door */}
-              <rect x="30" y="85" width="40" height="40" fill="gray" />
+              <rect x="-115" y="230" width="300" height="865" fill="gray" />
             </svg>
           </div>
           {/* Ground line: green horizontal line */}

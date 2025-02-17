@@ -8,6 +8,7 @@ import { v1 as uuidv1 } from "uuid"
 import { updateSessionData, getSessionData } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
 import { ToastProvider, Toast, ToastDescription, ToastViewport } from "@/components/ui/toast";
+import PDFViewer from "@/components/PDFViewer";
 
 export default function ConsentPage() {
   const [hasReadInfo, setHasReadInfo] = useState(false)
@@ -74,15 +75,13 @@ export default function ConsentPage() {
                   Consent Form
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl h-[80vh] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Information Sheet</DialogTitle>
                 </DialogHeader>
-                <iframe
-                  src="/old-consent-form.pdf"
-                  title="Information Sheet PDF"
-                  className="w-full h-[600px] border-none"
-                />
+                <div className="flex-1 overflow-y-auto">
+                  <PDFViewer pdfUrl="/old-consent-form.pdf" />
+                </div>
               </DialogContent>
             </Dialog>
 

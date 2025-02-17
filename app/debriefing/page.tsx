@@ -13,7 +13,7 @@ export default function DebriefingPage() {
   const [dialogOpen, setDialogOpen] = useState(true);
 
   const handleSubmit = () => {
-    if (password === "gingerbread") {
+    if (password.toLowerCase() === "prestige") {
       router.push("/experimenter");
     } else {
       setError("Wrong password");

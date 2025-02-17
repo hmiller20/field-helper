@@ -80,7 +80,7 @@ export default function ConsentPage() {
                   <DialogTitle>Information Sheet</DialogTitle>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto">
-                  <PDFViewer pdfUrl="/old-consent-form.pdf" />
+                  <PDFViewer pdfUrl="/consent-form.pdf" />
                 </div>
               </DialogContent>
             </Dialog>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import PDFViewer from "@/components/PDFViewer";
 
 export default function DebriefingPage() {
   const router = useRouter();
@@ -40,15 +41,13 @@ export default function DebriefingPage() {
                 View Debriefing Form Again
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl h-[80vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>That concludes the study. Thanks for participating. Please view the debriefing form below. Then give the tablet back to the experimenter.</DialogTitle>
               </DialogHeader>
-              <iframe
-                src="/old-debriefing-form.pdf"
-                title="Debriefing Form PDF"
-                className="w-full h-[600px] border-none"
-              />
+              <div className="flex-1 overflow-y-auto">
+                <PDFViewer pdfUrl="/debriefing-form.pdf" />
+              </div>
             </DialogContent>
           </Dialog>
 

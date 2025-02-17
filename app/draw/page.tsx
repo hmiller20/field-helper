@@ -209,28 +209,41 @@ const DrawingPage: React.FC = () => {
             onPointerCancel={stopDrawing}
           />
           {/* Scale object: simple tree */}
-          <div className="absolute bottom-0 right-4" style={{ pointerEvents: "none" }}>
-            <svg width="500" height="480" viewBox="0 0 40 120">
+          <div
+            className="absolute bottom-0 right-4"
+            style={{ pointerEvents: "none", width: "20%", height: "auto" }}
+          >
+            <svg
+              className="w-full h-full"
+              viewBox="0 0 40 120"
+              preserveAspectRatio="xMidYMid meet"
+            >
               {/* Tree trunk */}
               <rect x="35" y="70" width="10" height="60" fill="saddlebrown" />
-              {/* Tree branch rotated 180 degrees */}
+              {/* Tree branches */}
               <rect x="55" y="100" width="12" height="2" fill="saddlebrown" transform="rotate(225 45 100)" />
-              {/* Tree branch rotated 180 degrees */}
               <rect x="35" y="105" width="12" height="2" fill="saddlebrown" transform="rotate(155 45 100)" />
               {/* Tree canopy */}
               <circle cx="40" cy="50" r="30" fill="green" stroke="green" strokeWidth="5" />
             </svg>
           </div>
           {/* Simple house for scale */}
-          <div className="absolute bottom-0 left-30" style={{ pointerEvents: "none" }}>
-            <svg width="900" height="1100" viewBox="20 0 100 100">
+          <div
+            className="absolute bottom-0 left-[10%]"
+            style={{ pointerEvents: "none", width: "20%", height: "auto" }}
+          >
+            <svg
+              className="w-full h-full"
+              viewBox="20 0 100 100"
+              preserveAspectRatio="xMidYMid meet"
+            >
               {/* House body: tan square */}
               <rect x="20" y="70" width="60" height="40" fill="#D2B48C" />
-              {/* Chimney: basic rectangular chimney behind the red roof */}
+              {/* Chimney */}
               <rect x="65" y="45" width="8" height="25" fill="#8B4513" />
-              {/* Roof: red triangle */}
+              {/* Roof */}
               <polygon points="20,70 50,40 80,70" fill="red" />
-              {/* Garage door: basic gray garage door in front of the house body */}
+              {/* Garage door */}
               <rect x="30" y="85" width="40" height="40" fill="gray" />
             </svg>
           </div>

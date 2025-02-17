@@ -7,6 +7,8 @@ const withPWA = require("next-pwa")({
   // Automatically register the service worker and activate updates.
   register: true,
   skipWaiting: true,
+  // Exclude files that should not be precached
+  buildExcludes: [/\/_next\/app-build-manifest\.json$/],
   runtimeCaching: [
     {
       urlPattern: /\.pdf$/i,

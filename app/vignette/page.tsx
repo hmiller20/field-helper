@@ -31,15 +31,9 @@ export default function VignettePage() {
   const wordDelay = 225
 
   useEffect(() => {
-    const stored = localStorage.getItem("assignedVignette")
-    if (stored) {
-      setVignette(JSON.parse(stored))
-    } else {
-      const randomIndex = Math.floor(Math.random() * Vignettes.length)
-      const selected = Vignettes[randomIndex]
-      setVignette(selected)
-      localStorage.setItem("assignedVignette", JSON.stringify(selected))
-    }
+    const randomIndex = Math.floor(Math.random() * Vignettes.length)
+    const selected = Vignettes[randomIndex]
+    setVignette(selected)
   }, [])
 
   useEffect(() => {

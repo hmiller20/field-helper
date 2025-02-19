@@ -30,29 +30,20 @@ async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
 
 export async function POST(request: Request) {
   try {
-    // Parse and log the session data from the request body.
-    const sessionData: unknown = await request.json();
-    console.log("API /sync POST: received session data:", sessionData);
-    if (typeof sessionData !== "object" || sessionData === null) {
-      return NextResponse.json({ error: "Invalid session data" }, { status: 400 });
-    }
-    const validSessionData = sessionData as Record<string, unknown>;
+    const data = await request.json();
+    // Ensure data is an array of sessionData objects.
+    // If a single sessionData object is received, wrap it in an array.
+    const sessions = Array.isArray(data) ? data : [data];
 
-    const { db } = await connectToDatabase();
+    const { client } = await connectToDatabase();
 
     // Use a single minimal collection for all sync logs.
-    const collection = db.collection<Record<string, unknown>>("session_logs");
+    const collection = client.db(dbName).collection<Record<string, unknown>>("session_logs");
 
-    // Add a category and timestamp for better organization.
-    const newRecord = {
-      category: "session_sync",
-      ...validSessionData,
-      syncDate: new Date(),
-    };
+    // Insert all sessions as separate documents.
+    const result = await collection.insertMany(sessions);
 
-    const result = await collection.insertOne(newRecord);
-
-    return NextResponse.json({ success: true, insertedId: result.insertedId });
+    return NextResponse.json({ success: true, insertedIds: result.insertedIds });
   } catch (error) {
     console.error("Error syncing session data:", error);
     let errorMessage = "Failed to sync session data";

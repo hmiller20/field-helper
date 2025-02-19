@@ -40,6 +40,9 @@ export default function ConsentPage() {
       setTimeout(() => {
         setToastOpen(false);
       }, 3000);
+
+      // Delete session data after a successful upload so it won't be uploaded again.
+      localStorage.removeItem("sessionData");
     } catch (error) {
       console.error("Error syncing session data:", error);
     }

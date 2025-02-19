@@ -6,6 +6,7 @@ export interface SessionData {
   sessionNotes?: string;
   surveyResponses?: Record<string, unknown>;
   drawingData?: Record<string, unknown>;
+  syncTime?: string;
 }
 
 const STORAGE_KEY = "sessionData";

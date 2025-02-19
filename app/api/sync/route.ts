@@ -35,13 +35,17 @@ export async function POST(request: Request) {
     // If a single sessionData object is received, wrap it in an array.
     const sessions = Array.isArray(data) ? data : [data];
 
+    // Add the current sync time to each session object
+    const syncTime = new Date().toISOString(); // current timestamp
+    const sessionsWithSyncTime = sessions.map(session => ({ ...session, syncTime }));
+
     const { client } = await connectToDatabase();
 
     // Use a single minimal collection for all sync logs.
     const collection = client.db(dbName).collection<Record<string, unknown>>("session_logs");
 
     // Insert all sessions as separate documents.
-    const result = await collection.insertMany(sessions);
+    const result = await collection.insertMany(sessionsWithSyncTime);
 
     return NextResponse.json({ success: true, insertedIds: result.insertedIds });
   } catch (error) {

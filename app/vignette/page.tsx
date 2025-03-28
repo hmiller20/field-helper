@@ -27,8 +27,7 @@ const Vignettes = [
 export default function VignettePage() {
   const router = useRouter()
   const [vignette, setVignette] = useState<typeof Vignettes[number] | null>(null)
-  const [visibleWordCount, setVisibleWordCount] = useState(0)
-  const wordDelay = 225
+  const [canContinue, setCanContinue] = useState(false)
 
   useEffect(() => {
     const randomIndex = Math.floor(Math.random() * Vignettes.length)
@@ -37,19 +36,12 @@ export default function VignettePage() {
   }, [])
 
   useEffect(() => {
-    if (!vignette) return
-    setVisibleWordCount(0)
-    const wordsArray = vignette.text.split(" ")
-    let count = 0
-    const interval = setInterval(() => {
-      count++
-      setVisibleWordCount(count)
-      if (count >= wordsArray.length) {
-        clearInterval(interval)
-      }
-    }, wordDelay)
-    return () => clearInterval(interval)
-  }, [vignette, wordDelay])
+    if (!vignette) return;
+    const timer = setTimeout(() => {
+      setCanContinue(true);
+    }, 15000); // 15 seconds
+    return () => clearTimeout(timer);
+  }, [vignette])
 
   if (!vignette) return <div>Loading...</div>
 
@@ -65,37 +57,29 @@ export default function VignettePage() {
     conditionValue: conditionMapping[vignette.name],
   });
 
-  const words = vignette.text.split(" ");
-  const isVignetteComplete = visibleWordCount >= words.length;
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-2xl">
         <CardContent className="p-6 flex flex-col items-center gap-8">
           <div className="text-left text-lg sm:text-xl leading-relaxed max-w-xl">
-            {words.map((word, index) => (
-              <span
-                key={index}
-                style={{
-                  opacity: index < visibleWordCount ? 1 : 0,
-                  transition: 'opacity 0.3s ease-in-out'
-                }}
-              >
-                {word}{index !== words.length - 1 ? " " : ""}
-              </span>
-            ))}
+            {vignette.text}
           </div>
 
           <Button
             className={`w-48 h-16 text-xl bg-[#c1e6c1] text-black mt-4 ${
-              isVignetteComplete ? "hover:bg-[#a8dba8]" : "cursor-not-allowed pointer-events-none"
+              canContinue ? "hover:bg-[#a8dba8]" : "cursor-not-allowed pointer-events-none"
             }`}
             variant="secondary"
-            style={{ opacity: isVignetteComplete ? 1 : 0.5 }}
-            onClick={isVignetteComplete ? () => router.push('/survey') : undefined}
+            style={{ opacity: canContinue ? 1 : 0.5 }}
+            onClick={canContinue ? () => router.push('/survey') : undefined}
           >
             Continue
           </Button>
+          {!canContinue && (
+            <p className="text-sm text-gray-500 mt-2">
+              The continue button will become available soon. Please read the description carefully.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -13,20 +13,28 @@ import PDFViewer from "@/components/PDFViewer";
 export default function ConsentPage() {
   const [hasReadInfo, setHasReadInfo] = useState(false)
   const [toastOpen, setToastOpen] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const router = useRouter()
 
   const handleSync = async () => {
-    if (!navigator.onLine) {
-      console.error("You are offline. Please connect to the internet to upload local data.")
-      // Optionally, you could display an error toast or alert here.
+    if (isUploading) {
+      console.log("Upload already in progress");
       return;
     }
+
+    if (!navigator.onLine) {
+      console.error("You are offline. Please connect to the internet to upload local data.")
+      return;
+    }
+
     try {
+      setIsUploading(true);
       const sessionData = getSessionData();
-      if (!sessionData) {
+      if (!sessionData || sessionData.length === 0) {
         console.error("No session data available!");
         return;
       }
+
       const response = await fetch("/api/sync", {
         method: "POST",
         headers: {
@@ -34,17 +42,26 @@ export default function ConsentPage() {
         },
         body: JSON.stringify(sessionData),
       });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`);
+      }
+
       const result = await response.json();
       console.log("Sync result:", result);
+      
+      // Only clear localStorage after confirming successful upload
+      localStorage.removeItem("sessionData");
+      
       setToastOpen(true);
       setTimeout(() => {
         setToastOpen(false);
       }, 3000);
-
-      // Delete session data after a successful upload so it won't be uploaded again.
-      localStorage.removeItem("sessionData");
     } catch (error) {
       console.error("Error syncing session data:", error);
+      // Don't clear localStorage on error to allow retry
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -56,8 +73,9 @@ export default function ConsentPage() {
             onClick={handleSync}
             variant="secondary"
             className="text-sm bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 shadow-sm transition-colors"
+            disabled={isUploading}
           >
-            Upload Local Data
+            {isUploading ? "Uploading..." : "Upload Local Data"}
           </Button>
         </div>
 

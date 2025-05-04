@@ -39,14 +39,41 @@ export async function POST(request: Request) {
     const syncTime = new Date().toISOString(); // current timestamp
     const sessionsWithSyncTime = sessions.map(session => ({ ...session, syncTime }));
 
-    const { client } = await connectToDatabase();
+    const { client, db } = await connectToDatabase();
 
     // Use a single minimal collection for all sync logs.
     const collection = client.db(dbName).collection<Record<string, unknown>>("session_logs");
 
-    // Insert all sessions as separate documents.
-    const result = await collection.insertMany(sessionsWithSyncTime);
+    // Check for existing sessions with the same sessionId
+    const sessionIds = sessionsWithSyncTime.map(session => session.sessionId);
+    const existingSessions = await collection.find({ sessionId: { $in: sessionIds } }).toArray();
+    
+    if (existingSessions.length > 0) {
+      console.warn(`Found ${existingSessions.length} existing sessions with the same sessionIds. Skipping these sessions.`);
+      // Filter out sessions that already exist
+      const newSessions = sessionsWithSyncTime.filter(
+        session => !existingSessions.some(existing => existing.sessionId === session.sessionId)
+      );
+      
+      if (newSessions.length === 0) {
+        return NextResponse.json({ 
+          success: true, 
+          message: "All sessions already exist in database",
+          skipped: existingSessions.length
+        });
+      }
+      
+      // Insert only the new sessions
+      const result = await collection.insertMany(newSessions);
+      return NextResponse.json({ 
+        success: true, 
+        insertedIds: result.insertedIds,
+        skipped: existingSessions.length
+      });
+    }
 
+    // If no existing sessions found, insert all sessions
+    const result = await collection.insertMany(sessionsWithSyncTime);
     return NextResponse.json({ success: true, insertedIds: result.insertedIds });
   } catch (error) {
     console.error("Error syncing session data:", error);

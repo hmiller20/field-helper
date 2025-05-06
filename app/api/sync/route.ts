@@ -3,16 +3,48 @@
 
 import { NextResponse } from "next/server";
 import { MongoClient, Db } from "mongodb";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 // Ensure you have these environment variables set.
 const uri = process.env.MONGODB_URI as string;
 const dbName = process.env.MONGODB_DB as string;
+const s3Bucket = process.env.AWS_S3_BUCKET as string;
+const s3Region = process.env.AWS_REGION as string;
 
 if (!uri) {
   throw new Error("Missing environment variable: MONGODB_URI");
 }
 if (!dbName) {
   throw new Error("Missing environment variable: MONGODB_DB");
+}
+if (!s3Bucket) {
+  throw new Error("Missing environment variable: AWS_S3_BUCKET");
+}
+if (!s3Region) {
+  throw new Error("Missing environment variable: AWS_REGION");
+}
+
+// Initialize S3 client
+const s3Client = new S3Client({ region: s3Region });
+
+async function uploadImageToS3(imageData: string, sessionId: string): Promise<string> {
+  // Convert base64 to buffer
+  const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+  const buffer = Buffer.from(base64Data, 'base64');
+
+  // Generate a unique filename
+  const filename = `drawings/${sessionId}-${Date.now()}.png`;
+
+  // Upload to S3
+  await s3Client.send(new PutObjectCommand({
+    Bucket: s3Bucket,
+    Key: filename,
+    Body: buffer,
+    ContentType: 'image/png',
+  }));
+
+  // Return the URL
+  return `https://${s3Bucket}.s3.${s3Region}.amazonaws.com/${filename}`;
 }
 
 async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
@@ -38,6 +70,19 @@ export async function POST(request: Request) {
     // Add the current sync time to each session object
     const syncTime = new Date().toISOString(); // current timestamp
     const sessionsWithSyncTime = sessions.map(session => ({ ...session, syncTime }));
+
+    // Process each session
+    for (const session of sessionsWithSyncTime) {
+      // If there's a drawing image, upload it to S3
+      if (session.drawingData?.drawingImageUrl) {
+        const imageUrl = await uploadImageToS3(
+          session.drawingData.drawingImageUrl,
+          session.sessionId
+        );
+        // Update the session with the S3 URL
+        session.drawingData.drawingImageUrl = imageUrl;
+      }
+    }
 
     const { client, db } = await connectToDatabase();
 

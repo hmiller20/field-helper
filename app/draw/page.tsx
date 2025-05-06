@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { updateSessionData } from "@/utils/sessionData";
+import html2canvas from "html2canvas";
 
 const DrawingPage: React.FC = () => {
   // New ref that stores completed shapes (each as an array of points)
@@ -22,6 +23,7 @@ const DrawingPage: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef<boolean>(false);
   const shapePointsRef = useRef<{ x: number; y: number }[]>([]);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Adjust the canvas dimensions on mount
   useEffect(() => {
@@ -134,7 +136,7 @@ const DrawingPage: React.FC = () => {
     };
   };
 
-  const doneDrawing = () => {
+  const doneDrawing = async () => {
     if (isDrawingRef.current) {
       stopDrawing();
     }
@@ -159,8 +161,16 @@ const DrawingPage: React.FC = () => {
     const extents = calculateDrawingExtents(shapesRef.current);
     console.log("Calculated total area:", totalArea);
     console.log("Drawing extents:", extents);
-    // extents.height = distance between the highest and lowest pixel
-    // extents.width = horizontal length of your drawing
+
+    // Use html2canvas to capture the entire container (canvas + SVGs)
+    let imageData = "";
+    if (containerRef.current) {
+      const html2canvasResult = await html2canvas(containerRef.current, {backgroundColor: null});
+      imageData = html2canvasResult.toDataURL('image/png');
+    } else {
+      // fallback to just the canvas if containerRef is not available
+      imageData = canvas.toDataURL('image/png');
+    }
 
     // Update the session data with drawing information:
     updateSessionData({
@@ -168,7 +178,7 @@ const DrawingPage: React.FC = () => {
         totalArea,
         maxWidth: extents.width,
         maxHeight: extents.height,
-        // Optionally, add more drawing details here
+        drawingImageUrl: imageData  // Store the base64 image data of the full scene
       }
     });
 
@@ -198,7 +208,8 @@ const DrawingPage: React.FC = () => {
       </Dialog>
 
       <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-        <div className="relative w-full h-[80vh] border border-gray-300 overflow-hidden">
+        {/* Container for html2canvas screenshot */}
+        <div ref={containerRef} className="relative w-full h-[80vh] border border-gray-300 overflow-hidden">
           <canvas
             ref={canvasRef}
             className="w-full h-full bg-sky-100"

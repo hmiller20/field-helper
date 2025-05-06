@@ -5,7 +5,12 @@ export interface SessionData {
   experimenter?: string;
   sessionNotes?: string;
   surveyResponses?: Record<string, unknown>;
-  drawingData?: Record<string, unknown>;
+  drawingData?: {
+    totalArea: number;
+    maxWidth: number;
+    maxHeight: number;
+    drawingImageUrl?: string;  // URL to the stored drawing image
+  };
   syncTime?: string;
 }
 

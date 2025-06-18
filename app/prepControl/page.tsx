@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
-export default function SessionPage() {
+export default function PrepControlPage() {
   const router = useRouter()
 
   const handleContinue = () => {

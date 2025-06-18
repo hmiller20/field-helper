@@ -114,7 +114,7 @@ export default function ConsentPage() {
                 const sessionId = uuidv1();
                 updateSessionData({ sessionId });
                 console.log("Generated session ID:", sessionId);
-                router.push('/session');
+                router.push('/exampleDrawing');
               }}
             >
               Continue

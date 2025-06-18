@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { updateSessionData } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
+import { capitalize } from "@/utils/capitalize";
 
 const DrawingPage: React.FC = () => {
   // New ref that stores completed shapes (each as an array of points)
@@ -183,7 +184,7 @@ const DrawingPage: React.FC = () => {
     });
 
     // Navigate to the debriefing page after finishing drawing.
-    router.push('/debriefing');
+    router.push('/prepPrestige');
   };
 
   return (

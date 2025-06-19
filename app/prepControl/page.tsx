@@ -8,7 +8,7 @@ export default function PrepControlPage() {
   const router = useRouter()
 
   const handleContinue = () => {
-    router.push('/vignette')
+    router.push('/vignetteControl')
   }
 
   return (

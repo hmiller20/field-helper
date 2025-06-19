@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { updateSessionData } from "@/utils/sessionData";
+import { setPresentedFirst } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
@@ -138,9 +138,9 @@ const DrawingPage: React.FC = () => {
   };
 
   const doneDrawing = async () => {
-    if (isDrawingRef.current) {
-      stopDrawing();
-    }
+    /* ------- 1. normal finish-up stuff ---------- */
+    if (isDrawingRef.current) stopDrawing();
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -151,40 +151,57 @@ const DrawingPage: React.FC = () => {
       return;
     }
 
+    // ▸ A. metrics
     let totalArea = 0;
     shapesRef.current.forEach((shape) => {
-      if (shape.length >= 3) {
-        totalArea += calculateArea(shape);
-      }
+      if (shape.length >= 3) totalArea += calculateArea(shape);
     });
-    
-    // Calculate drawing extents (bounding box)
     const extents = calculateDrawingExtents(shapesRef.current);
-    console.log("Calculated total area:", totalArea);
-    console.log("Drawing extents:", extents);
 
-    // Use html2canvas to capture the entire container (canvas + SVGs)
+    // ▸ B. image capture
     let imageData = "";
     if (containerRef.current) {
-      const html2canvasResult = await html2canvas(containerRef.current, {backgroundColor: null});
-      imageData = html2canvasResult.toDataURL('image/png');
+      const html2canvasResult = await html2canvas(containerRef.current, {
+        backgroundColor: null,
+      });
+      imageData = html2canvasResult.toDataURL("image/png");
     } else {
-      // fallback to just the canvas if containerRef is not available
-      imageData = canvas.toDataURL('image/png');
+      imageData = canvas.toDataURL("image/png");
     }
 
-    // Update the session data with drawing information:
-    updateSessionData({
-      drawingData: {
+    /* ------- 2.  push the Control block into session ---------- */
+    const sess = JSON.parse(localStorage.getItem("session") || "{}");
+
+    sess.blocks = sess.blocks || [];
+    sess.blocks.push({
+      blockType: "control",
+      vignetteStartedAt: sess.tempVignetteStart,   // whatever you stored earlier
+      survey: sess.tempSurvey,                      // idem
+      drawing: {
         totalArea,
         maxWidth: extents.width,
         maxHeight: extents.height,
-        drawingImageUrl: imageData  // Store the base64 image data of the full scene
-      }
+        pngUrl: imageData,
+      },
     });
 
-    // Navigate to the debriefing page after finishing drawing.
-    router.push('/prepPrestige');
+    /* ------- 3. decide PD order once ---------- */
+    if (!sess.pdOrder) {
+      sess.pdOrder =
+        Math.random() < 0.5
+          ? ["prestige", "dominance"]
+          : ["dominance", "prestige"];
+      
+      // Set the presentedFirst field when counterbalancing is determined
+      const firstCondition = sess.pdOrder[0] as 'prestige' | 'dominance';
+      setPresentedFirst(firstCondition);
+    }
+
+    /* ------- 4. persist & navigate ---------- */
+    localStorage.setItem("session", JSON.stringify(sess));
+
+    const firstBlock = sess.pdOrder[0];               // "prestige" | "dominance"
+    router.push(`/prep${capitalize(firstBlock)}`);     // → /prepPrestige or /prepDominance
   };
 
   return (

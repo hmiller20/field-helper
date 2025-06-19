@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { updateSessionData } from "@/utils/sessionData";
+
 
 const Vignettes = [
   {
@@ -34,17 +34,7 @@ export default function VignettePage() {
 
   if (!vignette) return <div>Loading...</div>
 
-  const conditionMapping: Record<string, number> = {
-    dominance: 1,
-    prestige: 2,
-    virtue: 3,
-    lowStatus: 4,
-  };
-
-  updateSessionData({
-    vignette: vignette.name,
-    conditionValue: conditionMapping[vignette.name],
-  });
+  // Condition information is now tracked through presentedFirst field and blocks array
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -60,7 +50,7 @@ export default function VignettePage() {
             }`}
             variant="secondary"
             style={{ opacity: canContinue ? 1 : 0.5 }}
-            onClick={canContinue ? () => router.push('/survey') : undefined}
+            onClick={canContinue ? () => router.push('/surveyControl') : undefined}
           >
             Continue
           </Button>

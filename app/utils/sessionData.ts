@@ -8,30 +8,39 @@ export interface Block {
 }
 
 export interface Session {
+  // Core session identification
   id: string;
+  sessionId?: string; // Legacy field for backward compatibility
+  
+  // Experimental design fields
   order: ['prestige','dominance'] | ['dominance','prestige']; // set once
+  presentedFirst: 'prestige' | 'dominance'; // tracks which condition came first
   blocks: Block[];
-  demographics?: Record<string, string>;
-  syncedAt?: number;
-  // Temporary fields used during the session
-  tempVignetteStart?: number;
-  tempSurvey?: Record<string, string | number>;
-}
-
-export interface SessionData {
-  sessionId: string;
-  vignette?: string;
-  conditionValue?: number;
+  
+  // Additional data fields (from old SessionData interface)
   experimenter?: string;
   sessionNotes?: string;
-  surveyResponses?: Record<string, unknown>;
+  demographics?: Record<string, string>;
+  controlResponses?: Record<string, unknown>; // Flattened survey data from control condition
+  dominanceResponses?: Record<string, unknown>; // Survey responses from dominance condition
+  prestigeResponses?: Record<string, unknown>; // Survey responses from prestige condition
+  allResponses?: Record<string, unknown>; // All survey responses combined for MongoDB sync
+  
+  // Drawing data (for compatibility)
   drawingData?: {
     totalArea: number;
     maxWidth: number;
     maxHeight: number;
-    drawingImageUrl?: string;  // URL to the stored drawing image
+    drawingImageUrl?: string;
   };
+  
+  // Sync tracking
+  syncedAt?: number;
   syncTime?: string;
+  
+  // Temporary fields used during the session
+  tempVignetteStart?: number;
+  tempSurvey?: Record<string, string | number>;
 }
 
 const STORAGE_KEY = "session";
@@ -74,7 +83,7 @@ export const updateSession = (updates: Partial<Session>) => {
  * Retrieve the array of session data from local storage.
  * If the stored data is a single object, it will be wrapped in an array.
  */
-export const getSessionData = (): SessionData[] => {
+export const getSessionData = (): Session[] => {
   const data = localStorage.getItem(STORAGE_KEY);
   if (!data) {
     return [];
@@ -91,32 +100,32 @@ export const getSessionData = (): SessionData[] => {
 /**
  * Save the array of session data objects to local storage.
  */
-export const setSessionData = (data: SessionData[]) => {
+export const setSessionData = (data: Session[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 };
 
 /**
- * Update the session data by either merging new data into an existing session (matched via sessionId)
+ * Update the session data by either merging new data into an existing session (matched via id)
  * or by appending a new session if one doesn't already exist.
  * 
- * If newData includes a sessionId, the function will update the matching session if it exists.
+ * If newData includes an id, the function will update the matching session if it exists.
  * If no matching session is found, it will push the new session into the array.
- * If no sessionId is provided in newData, it assumes you want to update the most recent session.
+ * If no id is provided in newData, it assumes you want to update the most recent session.
  */
-export const updateSessionData = (newData: Partial<SessionData>) => {
+export const updateSessionData = (newData: Partial<Session>) => {
   const sessions = getSessionData();
 
-  if (newData.sessionId) {
-    const index = sessions.findIndex(session => session.sessionId === newData.sessionId);
+  if (newData.id) {
+    const index = sessions.findIndex(session => session.id === newData.id);
     if (index !== -1) {
       // Merge with the existing session
       sessions[index] = { ...sessions[index], ...newData };
     } else {
-      // Create a new session entry if one with this sessionId doesn't exist
-      sessions.push(newData as SessionData);
+      // Create a new session entry if one with this id doesn't exist
+      sessions.push(newData as Session);
     }
   } else {
-    // No sessionId provided, update the last (most recent) session if it exists.
+    // No id provided, update the last (most recent) session if it exists.
     if (sessions.length > 0) {
       sessions[sessions.length - 1] = { ...sessions[sessions.length - 1], ...newData };
     } else {
@@ -125,4 +134,53 @@ export const updateSessionData = (newData: Partial<SessionData>) => {
   }
   
   setSessionData(sessions);
+};
+
+/**
+ * Set the presentedFirst field when counterbalancing order is determined.
+ * This should be called immediately after the randomization occurs.
+ */
+export const setPresentedFirst = (presentedFirst: 'prestige' | 'dominance') => {
+  const session = getCurrentSession();
+  if (!session) {
+    console.error("No existing session found to set presentedFirst.");
+    return;
+  }
+  
+  // Update the Session interface
+  setSession({ ...session, presentedFirst });
+  
+  // Also update session data for syncing
+  updateSession({ presentedFirst });
+  
+  console.log(`Counterbalancing complete: ${presentedFirst} condition presented first`);
+};
+
+/**
+ * Convert Session data to format suitable for MongoDB syncing.
+ * Flattens the blocks structure and extracts key data points.
+ */
+export const prepareSessionForSync = (session: Session): Session => {
+  // Create consolidated responses object from all blocks
+  const allResponses: Record<string, unknown> = {};
+  session.blocks.forEach((block) => {
+    Object.entries(block.survey).forEach(([key, value]) => {
+      allResponses[`${block.blockType}_${key}`] = value;
+    });
+  });
+
+  // Find drawing data (you might want to include all drawings or just specific ones)
+  const drawings = session.blocks.map(block => ({
+    blockType: block.blockType,
+    area: block.drawing.area,
+    pngUrl: block.drawing.pngUrl,
+  }));
+
+  return {
+    ...session,
+    // Include all survey responses for easy querying
+    allResponses,
+    drawings,
+    syncTime: new Date().toISOString(),
+  } as Session;
 }; 

@@ -124,7 +124,7 @@ export default function ConsentPage() {
       </div>
       <Toast 
         open={toastOpen} 
-        onOpenChange={setToastOpen} 
+        onOpenChange={setToastOpen}
         duration={3000}
         className="bg-green-100 border border-green-300 flex items-center justify-center w-[350px]"
       >

@@ -4,7 +4,12 @@ export interface Block {
   blockType: BlockType;
   vignetteStartedAt: number;
   survey: Record<string, string | number>;
-  drawing: { pngUrl: string; area: number; };
+  drawing: { 
+    pngUrl: string; 
+    area: number;
+    maxWidth: number;
+    maxHeight: number;
+  };
 }
 
 export interface Session {
@@ -13,17 +18,14 @@ export interface Session {
   sessionId?: string; // Legacy field for backward compatibility
   
   // Experimental design fields
-  order: ['prestige','dominance'] | ['dominance','prestige']; // set once
-  presentedFirst: 'prestige' | 'dominance'; // tracks which condition came first
-  blocks: Block[];
+  order: ['prestige','dominance'] | ['dominance','prestige']; // set once - this is the order for blocks 2 & 3
+  presentedFirst: 'prestige' | 'dominance'; // tracks which condition came first (block 2)
+  blocks: Block[]; // Should contain exactly 3 blocks: control, then prestige/dominance in randomized order
   
   // Additional data fields (from old SessionData interface)
   experimenter?: string;
   sessionNotes?: string;
   demographics?: Record<string, string>;
-  controlResponses?: Record<string, unknown>; // Flattened survey data from control condition
-  dominanceResponses?: Record<string, unknown>; // Survey responses from dominance condition
-  prestigeResponses?: Record<string, unknown>; // Survey responses from prestige condition
   allResponses?: Record<string, unknown>; // All survey responses combined for MongoDB sync
   
   // Drawing data (for compatibility)
@@ -113,27 +115,33 @@ export const setSessionData = (data: Session[]) => {
  * If no id is provided in newData, it assumes you want to update the most recent session.
  */
 export const updateSessionData = (newData: Partial<Session>) => {
-  const sessions = getSessionData();
-
+  // Get current single session (not array)
+  const currentSession = getCurrentSession();
+  
   if (newData.id) {
-    const index = sessions.findIndex(session => session.id === newData.id);
-    if (index !== -1) {
-      // Merge with the existing session
-      sessions[index] = { ...sessions[index], ...newData };
+    // If providing an ID, create or update the session
+    if (currentSession) {
+      // Update existing session
+      const updatedSession = { ...currentSession, ...newData };
+      setSession(updatedSession);
     } else {
-      // Create a new session entry if one with this id doesn't exist
-      sessions.push(newData as Session);
+      // Create new session with the provided data
+      const newSession = {
+        id: newData.id,
+        blocks: [],
+        ...newData
+      } as Session;
+      setSession(newSession);
     }
   } else {
-    // No id provided, update the last (most recent) session if it exists.
-    if (sessions.length > 0) {
-      sessions[sessions.length - 1] = { ...sessions[sessions.length - 1], ...newData };
+    // No id provided, update the current session if it exists
+    if (currentSession) {
+      const updatedSession = { ...currentSession, ...newData };
+      setSession(updatedSession);
     } else {
-      console.error("No existing session found to update.");
+      console.error("No existing session found to update and no ID provided to create new session.");
     }
   }
-  
-  setSessionData(sessions);
 };
 
 /**
@@ -163,24 +171,157 @@ export const setPresentedFirst = (presentedFirst: 'prestige' | 'dominance') => {
 export const prepareSessionForSync = (session: Session): Session => {
   // Create consolidated responses object from all blocks
   const allResponses: Record<string, unknown> = {};
+  
   session.blocks.forEach((block) => {
     Object.entries(block.survey).forEach(([key, value]) => {
+      // Add to consolidated responses with block prefix
       allResponses[`${block.blockType}_${key}`] = value;
     });
   });
 
-  // Find drawing data (you might want to include all drawings or just specific ones)
+  // Find drawing data for all blocks
   const drawings = session.blocks.map(block => ({
     blockType: block.blockType,
     area: block.drawing.area,
+    maxWidth: block.drawing.maxWidth,
+    maxHeight: block.drawing.maxHeight,
     pngUrl: block.drawing.pngUrl,
+    vignetteStartedAt: block.vignetteStartedAt,
   }));
+
+  // Calculate total drawing area across all blocks
+  const totalDrawingArea = session.blocks.reduce((sum, block) => sum + block.drawing.area, 0);
 
   return {
     ...session,
     // Include all survey responses for easy querying
     allResponses,
     drawings,
+    totalDrawingArea,
     syncTime: new Date().toISOString(),
+    syncedAt: Date.now(),
   } as Session;
+};
+
+/**
+ * Get the next block type that should be completed based on current session state.
+ * Returns null if all blocks are completed.
+ */
+export const getNextBlockType = (): BlockType | null => {
+  const session = getCurrentSession();
+  if (!session) return 'control'; // Start with control if no session
+  
+  const completedBlockTypes = session.blocks.map(block => block.blockType);
+  
+  // Control is always first
+  if (!completedBlockTypes.includes('control')) {
+    return 'control';
+  }
+  
+  // After control, follow the randomized order
+  if (session.order) {
+    const [first, second] = session.order;
+    
+    if (!completedBlockTypes.includes(first)) {
+      return first;
+    }
+    
+    if (!completedBlockTypes.includes(second)) {
+      return second;
+    }
+  }
+  
+  // All blocks completed
+  return null;
+};
+
+/**
+ * Check if all three blocks (control, prestige, dominance) are completed.
+ */
+export const isSessionComplete = (): boolean => {
+  const session = getCurrentSession();
+  if (!session) return false;
+  
+  const completedBlockTypes = session.blocks.map(block => block.blockType);
+  const requiredBlocks: BlockType[] = ['control', 'prestige', 'dominance'];
+  
+  return requiredBlocks.every(blockType => completedBlockTypes.includes(blockType));
+};
+
+/**
+ * Validate that the session has the proper structure for three blocks.
+ * Useful for debugging and ensuring data integrity.
+ */
+export const validateSessionStructure = (session: Session): boolean => {
+  try {
+    // Check basic structure
+    if (!session.id || !Array.isArray(session.blocks)) {
+      console.error('Session missing basic structure');
+      return false;
+    }
+
+    // Check that we don't have more than 3 blocks
+    if (session.blocks.length > 3) {
+      console.error('Session has more than 3 blocks');
+      return false;
+    }
+
+    // Check for duplicate block types
+    const blockTypes = session.blocks.map(b => b.blockType);
+    const uniqueBlockTypes = Array.from(new Set(blockTypes));
+    if (blockTypes.length !== uniqueBlockTypes.length) {
+      console.error('Session has duplicate block types');
+      return false;
+    }
+
+    // If we have control block, ensure order is set
+    const hasControl = blockTypes.includes('control');
+    if (hasControl && !session.order) {
+      console.error('Session has control block but no order set');
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error validating session structure:', error);
+    return false;
+  }
+};
+
+/**
+ * Debug function to log current session state and block completion status.
+ * Useful for troubleshooting the three-block flow.
+ */
+export const debugSessionState = (): void => {
+  const session = getCurrentSession();
+  if (!session) {
+    console.log('=== SESSION DEBUG: No session found ===');
+    return;
+  }
+  
+  console.log('=== SESSION DEBUG ===');
+  console.log('Session ID:', session.id);
+  console.log('Order:', session.order);
+  console.log('Presented First:', session.presentedFirst);
+  console.log('Blocks completed:', session.blocks.length);
+  
+  session.blocks.forEach((block, index) => {
+    console.log(`Block ${index + 1}:`, {
+      blockType: block.blockType,
+      vignetteStartedAt: new Date(block.vignetteStartedAt).toLocaleString(),
+      surveyResponseCount: Object.keys(block.survey).length,
+      drawingArea: block.drawing.area,
+      drawingMaxWidth: block.drawing.maxWidth,
+      drawingMaxHeight: block.drawing.maxHeight,
+    });
+  });
+  
+  const completedTypes = session.blocks.map(b => b.blockType);
+  const nextBlock = getNextBlockType();
+  const isComplete = isSessionComplete();
+  
+  console.log('Completed block types:', completedTypes);
+  console.log('Next block needed:', nextBlock);
+  console.log('Session complete:', isComplete);
+  console.log('=== END SESSION DEBUG ===');
 }; 

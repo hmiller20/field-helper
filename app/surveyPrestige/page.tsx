@@ -135,7 +135,6 @@ export default function SurveyPrestigePage() {
             disabled={!isComplete}
             onClick={() => {
               updateSession({ 
-                prestigeResponses: responses,
                 tempSurvey: responses 
               });
               router.push('/drawPrestige');

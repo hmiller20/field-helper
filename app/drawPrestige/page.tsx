@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, getNextBlockType, isSessionComplete, debugSessionState } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
@@ -163,64 +163,44 @@ const DrawPrestigePage: React.FC = () => {
 
     // Update session
     console.log("=== GETTING SESSION FROM LOCALSTORAGE ===");
-    const existingSession = localStorage.getItem("session");
-    console.log("Existing session string:", existingSession);
-    
-    let sess = JSON.parse(existingSession || "{}");
-    console.log("Parsed session:", sess);
-    
-    // Fix: If session is stored as an array, extract the first object
-    if (Array.isArray(sess) && sess.length > 0) {
-      console.log("Session is an array, extracting first object");
-      sess = sess[0];
-      console.log("Extracted session object:", sess);
+    const session = getCurrentSession();
+    if (!session) {
+      router.push('/consent');
+      return;
     }
     
-    sess.blocks = sess.blocks || [];
-    console.log("Current blocks before adding:", sess.blocks);
+    console.log("Current session:", session);
     
-    sess.blocks.push({
+    const blocks = [...(session.blocks || [])];
+    console.log("Current blocks before adding:", blocks);
+    
+    blocks.push({
       blockType: "prestige",
-      vignetteStartedAt: sess.tempVignetteStart,
-      survey: sess.tempSurvey,
+      vignetteStartedAt: session.tempVignetteStart || Date.now(),
+      survey: session.tempSurvey || {},
       drawing: {
-        totalArea,
+        area: totalArea,
         maxWidth: extents.width,
         maxHeight: extents.height,
         pngUrl: imageData,
       },
     });
 
-    // Mark prestige sequence as completed
-    sess.completedSequences = sess.completedSequences || {};
-    sess.completedSequences.prestige = true;
+    // Update session with the new block
+    updateSession({ blocks });
     
-    console.log("=== ABOUT TO SAVE TO LOCALSTORAGE ===");
-    console.log("Session to save:", sess);
-    console.log("completedSequences:", sess.completedSequences);
+    console.log("=== UPDATED SESSION ===");
+    console.log("PRESTIGE COMPLETE");
     
-    localStorage.setItem("session", JSON.stringify(sess));
-    
-    console.log("=== SAVED TO LOCALSTORAGE ===");
-    console.log("PRESTIGE COMPLETE = TRUE");
-    
-    // Verify it was saved
-    const verifySession = localStorage.getItem("session");
-    console.log("Verification - session after save:", verifySession);
+    // Debug session state
+    debugSessionState();
 
-    // Check completion and navigate
-    const dominanceCompleted = sess.completedSequences.dominance || false;
-    const prestigeCompleted = sess.completedSequences.prestige || false;
-
-    console.log("Completion status - dominance:", dominanceCompleted, "prestige:", prestigeCompleted);
-
-    if (dominanceCompleted && prestigeCompleted) {
-      console.log("Both sequences completed, going to demographics");
-      router.push('/demographics');
-    } else if (!dominanceCompleted) {
-      console.log("Going to dominance sequence");
-      router.push('/prepDominance');
+    // Determine next step using helper function
+    const nextBlockType = getNextBlockType();
+    if (nextBlockType) {
+      router.push(`/prep${capitalize(nextBlockType)}`);
     } else {
+      // All blocks completed, go to demographics
       router.push('/demographics');
     }
   };

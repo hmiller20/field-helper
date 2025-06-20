@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { setPresentedFirst } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, setPresentedFirst } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
@@ -170,15 +170,19 @@ const DrawingPage: React.FC = () => {
     }
 
     /* ------- 2.  push the Control block into session ---------- */
-    const sess = JSON.parse(localStorage.getItem("session") || "{}");
+    const session = getCurrentSession();
+    if (!session) {
+      router.push('/consent');
+      return;
+    }
 
-    sess.blocks = sess.blocks || [];
-    sess.blocks.push({
+    const blocks = [...(session.blocks || [])];
+    blocks.push({
       blockType: "control",
-      vignetteStartedAt: sess.tempVignetteStart,   // whatever you stored earlier
-      survey: sess.tempSurvey,                      // idem
+      vignetteStartedAt: session.tempVignetteStart || Date.now(),
+      survey: session.tempSurvey || {},
       drawing: {
-        totalArea,
+        area: totalArea,
         maxWidth: extents.width,
         maxHeight: extents.height,
         pngUrl: imageData,
@@ -186,22 +190,22 @@ const DrawingPage: React.FC = () => {
     });
 
     /* ------- 3. decide PD order once ---------- */
-    if (!sess.pdOrder) {
-      sess.pdOrder =
-        Math.random() < 0.5
-          ? ["prestige", "dominance"]
-          : ["dominance", "prestige"];
+    let order = session.order;
+    if (!order) {
+      order = Math.random() < 0.5
+        ? ["prestige", "dominance"]
+        : ["dominance", "prestige"];
       
       // Set the presentedFirst field when counterbalancing is determined
-      const firstCondition = sess.pdOrder[0] as 'prestige' | 'dominance';
+      const firstCondition = order[0] as 'prestige' | 'dominance';
       setPresentedFirst(firstCondition);
     }
 
     /* ------- 4. persist & navigate ---------- */
-    localStorage.setItem("session", JSON.stringify(sess));
+    updateSession({ blocks, order });
 
-    const firstBlock = sess.pdOrder[0];               // "prestige" | "dominance"
-    router.push(`/prep${capitalize(firstBlock)}`);     // → /prepPrestige or /prepDominance
+    const firstBlock = order[0];
+    router.push(`/prep${capitalize(firstBlock)}`);
   };
 
   return (

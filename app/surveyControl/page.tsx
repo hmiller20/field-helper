@@ -135,7 +135,6 @@ export default function SurveyControlPage() {
             disabled={!isComplete}
             onClick={() => {
               updateSession({ 
-                controlResponses: responses,
                 tempSurvey: responses 
               });
               router.push('/drawControl');

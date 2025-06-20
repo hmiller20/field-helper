@@ -135,7 +135,6 @@ export default function SurveyDominancePage() {
             disabled={!isComplete}
             onClick={() => {
               updateSession({ 
-                dominanceResponses: responses,
                 tempSurvey: responses 
               });
               router.push('/drawDominance');

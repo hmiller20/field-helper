@@ -58,8 +58,10 @@ const Draw = ({ blockType }: Props) => {
       vignetteStartedAt: session.tempVignetteStart || Date.now(),
       survey: session.tempSurvey || {},
       drawing: {
-        pngUrl: imageData,
         area: totalArea,
+        maxWidth: extents.width,
+        maxHeight: extents.height,
+        pngUrl: imageData,
       },
     });
 

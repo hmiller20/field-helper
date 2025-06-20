@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BlockType } from "@/utils/sessionData";
+import { BlockType, getCurrentSession, updateSession } from "@/utils/sessionData";
 import { capitalize } from "@/utils/capitalize";
 
 const VIGNETTES: Record<BlockType, string> = {
@@ -18,9 +18,25 @@ const Vignette = ({ blockType }: { blockType: BlockType }) => {
 
   // save start time in session temp field
   useEffect(() => {
-    const s = JSON.parse(localStorage.getItem("session") || "{}");
-    s.tempVignetteStart = Date.now();
-    localStorage.setItem("session", JSON.stringify(s));
+    console.log("=== VIGNETTE: Component loaded ===");
+    
+    const session = getCurrentSession();
+    console.log("=== VIGNETTE: getCurrentSession result ===", session);
+    console.log("=== VIGNETTE: Session ID ===", session?.id);
+    
+    if (!session) {
+      console.log("=== VIGNETTE: No session found, redirecting to consent ===");
+      router.push('/consent');
+      return;
+    }
+    
+    console.log("=== VIGNETTE: Updating session with vignette start time ===");
+    updateSession({ tempVignetteStart: Date.now() });
+    
+    // Verify the update worked
+    const updatedSession = getCurrentSession();
+    console.log("=== VIGNETTE: Session after update ===", updatedSession);
+    console.log("=== VIGNETTE: Session ID after update ===", updatedSession?.id);
   }, []);
 
   useEffect(() => {

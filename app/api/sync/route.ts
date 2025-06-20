@@ -159,7 +159,7 @@ export async function POST(request: Request) {
     const { client, db } = await connectToDatabase();
 
     // Use a single minimal collection for all sync logs.
-    const collection = client.db(dbName).collection<Record<string, unknown>>("session_logs");
+    const collection = db.collection<Record<string, unknown>>("session_logs");
 
     // Check for existing sessions with the same id
     const sessionIds = sessionsWithSyncTime.map(session => session.id);

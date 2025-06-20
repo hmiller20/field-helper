@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BlockType } from "@/utils/sessionData";
+import { BlockType, getCurrentSession, updateSession } from "@/utils/sessionData";
 import { capitalize } from "@/utils/capitalize";
 
 interface Q {
@@ -26,9 +26,12 @@ const Survey = ({ blockType }: { blockType: BlockType }) => {
   const allDone = ITEMS[blockType].every((q) => answers[q.id]);
 
   const handleContinue = () => {
-    const s = JSON.parse(localStorage.getItem("session") || "{}");
-    s.tempSurvey = answers;
-    localStorage.setItem("session", JSON.stringify(s));
+    const session = getCurrentSession();
+    if (!session) {
+      router.push('/consent');
+      return;
+    }
+    updateSession({ tempSurvey: answers });
     router.push(`/draw${capitalize(blockType)}`);
   };
 

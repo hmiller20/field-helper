@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { v1 as uuidv1 } from "uuid"
-import { updateSessionData, getSessionData } from "@/utils/sessionData";
+import { updateSessionData, getSessionData, getCurrentSession } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
 import { ToastProvider, Toast, ToastDescription, ToastViewport } from "@/components/ui/toast";
 import PDFViewer from "@/components/PDFViewer";
@@ -51,7 +51,7 @@ export default function ConsentPage() {
       console.log("Sync result:", result);
       
       // Only clear localStorage after confirming successful upload
-      localStorage.removeItem("sessionData");
+      localStorage.removeItem("session");
       
       setToastOpen(true);
       setTimeout(() => {
@@ -112,8 +112,19 @@ export default function ConsentPage() {
               variant="secondary"
               onClick={() => {
                 const sessionId = uuidv1();
-                updateSessionData({ sessionId });
-                console.log("Generated session ID:", sessionId);
+                console.log("=== CONSENT: Generated session ID ===", sessionId);
+                
+                updateSessionData({ id: sessionId });
+                
+                // Verify what was actually stored
+                const storedSession = localStorage.getItem("session");
+                console.log("=== CONSENT: Stored in localStorage ===", storedSession);
+                
+                // Verify getCurrentSession works
+                const currentSession = getCurrentSession();
+                console.log("=== CONSENT: getCurrentSession result ===", currentSession);
+                console.log("=== CONSENT: Session ID from getCurrentSession ===", currentSession?.id);
+                
                 router.push('/exampleDrawing');
               }}
             >

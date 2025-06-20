@@ -15,9 +15,15 @@ import { getCurrentSession, updateSession, getNextBlockType, isSessionComplete, 
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
+// Drawing area validation constants
+const MIN_AREA = 3000;
+const MAX_AREA = 125000;
+
 const DrawDominancePage: React.FC = () => {
   const shapesRef = useRef<{ x: number; y: number }[][]>([]);
   const [showModal, setShowModal] = useState(true);
+  const [showAreaWarning, setShowAreaWarning] = useState(false);
+  const [areaWarningMessage, setAreaWarningMessage] = useState("");
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef<boolean>(false);
@@ -148,6 +154,20 @@ const DrawDominancePage: React.FC = () => {
     shapesRef.current.forEach((shape) => {
       if (shape.length >= 3) totalArea += calculateArea(shape);
     });
+
+    // Area validation - check if drawing is too small or too large
+    if (totalArea < MIN_AREA) {
+      setAreaWarningMessage("Your drawing looks really small. Please clear the canvas and try drawing a more realistic size.");
+      setShowAreaWarning(true);
+      return;
+    }
+    
+    if (totalArea > MAX_AREA) {
+      setAreaWarningMessage("Your drawing looks really big. Please clear the canvas and try drawing a more realistic size.");
+      setShowAreaWarning(true);
+      return;
+    }
+
     const extents = calculateDrawingExtents(shapesRef.current);
 
     // Capture image
@@ -223,6 +243,21 @@ const DrawDominancePage: React.FC = () => {
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => setShowModal(false)}>Got it</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Area validation warning dialog */}
+      <Dialog open={showAreaWarning} onOpenChange={setShowAreaWarning}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Drawing Size Issue</DialogTitle>
+            <DialogDescription className="text-lg text-black">
+              {areaWarningMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowAreaWarning(false)}>OK</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

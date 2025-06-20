@@ -9,6 +9,7 @@ export interface Block {
     area: number;
     maxWidth: number;
     maxHeight: number;
+    verticality: number;
   };
 }
 

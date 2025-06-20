@@ -137,9 +137,15 @@ const DrawingPage: React.FC = () => {
         maxY = Math.max(maxY, y);
       });
     });
+    
+    // Get canvas height for inverting minY
+    const canvas = canvasRef.current;
+    const canvasHeight = canvas ? canvas.getBoundingClientRect().height : 0;
+    
     return {
       width: maxX - minX,
       height: maxY - minY,
+      minY: canvasHeight - minY, // Invert so higher values = closer to top
     };
   };
 
@@ -205,6 +211,7 @@ const DrawingPage: React.FC = () => {
         area: totalArea,
         maxWidth: extents.width,
         maxHeight: extents.height,
+        verticality: extents.minY,
         pngUrl: imageData,
       },
     });

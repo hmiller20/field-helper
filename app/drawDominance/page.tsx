@@ -136,7 +136,12 @@ const DrawDominancePage: React.FC = () => {
         maxY = Math.max(maxY, y);
       });
     });
-    return { width: maxX - minX, height: maxY - minY };
+    
+    // Get canvas height for inverting minY
+    const canvas = canvasRef.current;
+    const canvasHeight = canvas ? canvas.getBoundingClientRect().height : 0;
+    
+    return { width: maxX - minX, height: maxY - minY, minY: canvasHeight - minY };
   };
 
   const doneDrawing = async () => {
@@ -202,6 +207,7 @@ const DrawDominancePage: React.FC = () => {
         area: totalArea,
         maxWidth: extents.width,
         maxHeight: extents.height,
+        verticality: extents.minY,
         pngUrl: imageData,
       },
     });

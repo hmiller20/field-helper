@@ -15,15 +15,16 @@ export default function ExampleDrawingPage() {
           
           <div className="flex flex-col items-center gap-4">
             <p className="text-center text-lg leading-relaxed">
-              Here's an example of what we're looking for in your drawing:
+              In this study, you will draw some figures. Here's an example of what we're looking for in your drawings:
             </p>
             
-            {/* Placeholder for gingerbread man example - you can replace this with an actual image */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-              <p className="text-gray-500">Gingerbread Man Example</p>
-              <p className="text-sm text-gray-400 mt-2">
-                (Replace this with actual example image)
-              </p>
+            {/* Gingerbread man example image */}
+            <div className="flex justify-center">
+              <img 
+                src="/gingerbread.png" 
+                alt="Gingerbread man example drawing"
+                className="max-w-xs h-auto border rounded-lg shadow-sm"
+              />
             </div>
             
             <p className="text-center text-gray-600">

@@ -3,27 +3,29 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BlockType, getCurrentSession, updateSession } from "@/utils/sessionData";
 import { capitalize } from "@/utils/capitalize";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 const VIGNETTES: Record<BlockType, string> = {
-  control: "John is an average person you might pass on the street …",
+  control: "John is a 35-year-old man who lives in a mid-sized city. He has brown hair and usually wears business casual clothing to work. John graduated from college with a degree in business administration. He has been working in various professional roles for about ten years since graduation. John typically wakes up early each morning, has coffee and breakfast, then commutes to his office downtown.",
   prestige:
-    "John is widely respected for his expertise and often mentors others …",
+    "A company is hiring a new CEO, and Bill is being considered for the position. Bill has several years of workplace experience and has gained a considerable degree of influence over others. His leadership strategy focuses on leveraging his skills and abilities to influence others. In leadership roles, he fosters positive relationships and teamwork among his subordinates. Bill generally takes input from others on how tasks should be accomplished, although he is also good at making suggestions about how to improve ideas provided by others. When Bill's subordinates have good ideas, they feel comfortable bringing them up and asking to implement them, even when those ideas are contrary to Bill's view of the situation. Many subordinates follow Bill's advice because they respect and admire him. In sum, Bill adopts a leadership style focused on making skillful decisions.",
   dominance:
-    "John commands attention by asserting himself forcefully in meetings …",
+    "A company is hiring a new CEO, and Bill is being considered for the position. Bill has several years of workplace experience and has gained a considerable degree of influence over others. Bill has aggressively moved through the ranks into a position of leadership. He is a dominant leader who prioritizes having control and authority over the people who report to him. When Bill makes a decision, that decision is final, even when others disagree. Bill has his own views of how tasks should be accomplished, and he uses reward and punishment to get people to follow his ideas. Although his subordinates sometimes have good ideas, those subordinates know it is better to let Bill have his way rather than contradict his ideas. Many subordinates fear Bill, and for that reason they follow his orders. In sum, Bill adopts a dominant leadership style focused on making definitive decisions.",
 };
 
-// Second block versions (placeholder text - will be edited later)
+// Second block versions (more information about John)
 const VIGNETTES_SECOND_BLOCK: Record<BlockType, string> = {
-  control: "John is an average person you might pass on the street …", // control text doesn't change
+  control: "John is a 35-year-old man who lives in a mid-sized city. He has brown hair and usually wears business casual clothing to work. John graduated from college with a degree in business administration. He has been working in various professional roles for about ten years since graduation. John typically wakes up early each morning, has coffee and breakfast, then commutes to his office downtown.", // control text doesn't change
   prestige:
-    "John is a second block prestige person - placeholder text to be edited later …",
+    "A company is hiring a new CEO, and John is being considered for the position. John has several years of workplace experience and has gained a considerable degree of influence over others. His leadership strategy focuses on leveraging his skills and abilities to influence others. In leadership roles, he fosters positive relationships and teamwork among his subordinates. John generally takes input from others on how tasks should be accomplished, although he is also good at making suggestions about how to improve ideas provided by others. When John's subordinates have good ideas, they feel comfortable bringing them up and asking to implement them, even when those ideas are contrary to John's view of the situation. Many subordinates follow John's advice because they respect and admire him. In sum, John adopts a leadership style focused on making skillful decisions.",
   dominance:
-    "John is a second block dominance person - placeholder text to be edited later …",
+    "A company is hiring a new CEO, and John is being considered for the position. John has several years of workplace experience and has gained a considerable degree of influence over others. John has aggressively moved through the ranks into a position of leadership. He is a dominant leader who prioritizes having control and authority over the people who report to him. When John makes a decision, that decision is final, even when others disagree. John has his own views of how tasks should be accomplished, and he uses reward and punishment to get people to follow his ideas. Although his subordinates sometimes have good ideas, those subordinates know it is better to let John have his way rather than contradict his ideas. Many subordinates fear John, and for that reason they follow his orders. In sum, John adopts a dominant leadership style focused on making definitive decisions.",
 };
 
 const Vignette = ({ blockType }: { blockType: BlockType }) => {
   const router = useRouter();
-  const [secondsLeft, setSecondsLeft] = useState(15);
+  const [canContinue, setCanContinue] = useState(false);
 
   // Function to determine if current block is second or third
   const getCurrentBlockPosition = (): number => {
@@ -42,12 +44,19 @@ const Vignette = ({ blockType }: { blockType: BlockType }) => {
   const getVignetteText = (): string => {
     const position = getCurrentBlockPosition();
     
+    console.log("=== VIGNETTE TEXT DEBUG ===");
+    console.log("Block type:", blockType);
+    console.log("Current position:", position);
+    console.log("Will use SECOND_BLOCK?", (blockType === 'prestige' || blockType === 'dominance') && position === 2);
+    
     // For prestige/dominance blocks, use different text if it's the second block
     if ((blockType === 'prestige' || blockType === 'dominance') && position === 2) {
+      console.log("Using SECOND_BLOCK text (John):", VIGNETTES_SECOND_BLOCK[blockType].substring(0, 100) + "...");
       return VIGNETTES_SECOND_BLOCK[blockType];
     }
     
     // Default text for all other cases
+    console.log("Using main VIGNETTES (Bill):", VIGNETTES[blockType].substring(0, 100) + "...");
     return VIGNETTES[blockType];
   };
 
@@ -75,23 +84,38 @@ const Vignette = ({ blockType }: { blockType: BlockType }) => {
   }, []);
 
   useEffect(() => {
-    if (secondsLeft === 0) return;
-    const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [secondsLeft]);
+    const timer = setTimeout(() => {
+      setCanContinue(true);
+    }, 15000); // 15 seconds
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <main className="flex flex-col items-center gap-6 p-8">
-      <article className="max-w-2xl">{getVignetteText()}</article>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <Card className="w-full max-w-2xl">
+        <CardContent className="p-6 flex flex-col items-center gap-8">
+          <div className="text-left text-lg sm:text-xl leading-relaxed max-w-xl">
+            {getVignetteText()}
+          </div>
 
-      <button
-        className="rounded bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-40"
-        disabled={secondsLeft > 0}
-        onClick={() => router.push(`/survey${capitalize(blockType)}`)}
-      >
-        {secondsLeft > 0 ? `Continue in ${secondsLeft}` : "Continue"}
-      </button>
-    </main>
+          <Button
+            className={`w-48 h-16 text-xl bg-[#c1e6c1] text-black mt-4 ${
+              canContinue ? "hover:bg-[#a8dba8]" : "cursor-not-allowed pointer-events-none"
+            }`}
+            variant="secondary"
+            style={{ opacity: canContinue ? 1 : 0.5 }}
+            onClick={canContinue ? () => router.push(`/survey${capitalize(blockType)}`) : undefined}
+          >
+            Continue
+          </Button>
+          {!canContinue && (
+            <p className="text-sm text-gray-500 mt-2">
+              The continue button will become available soon. Please read the description carefully.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

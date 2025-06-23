@@ -34,6 +34,36 @@ const DrawDominancePage: React.FC = () => {
 
   console.log("=== DOMINANCE PAGE LOADED ===");
 
+  // Function to determine person's name based on block position
+  const getPersonName = (): string => {
+    const session = getCurrentSession();
+    if (!session) return "John"; // default
+    
+    const completedBlocksCount = session.blocks?.length || 0;
+    const currentBlockPosition = completedBlocksCount + 1;
+    
+    // Control is block 1 (John), second block is John, third block is Bill
+    return currentBlockPosition === 3 ? "Bill" : "John";
+  };
+
+  // Function to get the modal text with conditional "redraw" styling for second block
+  const getModalText = (): string => {
+    const session = getCurrentSession();
+    if (!session) return `Now, in between the house and the tree, please draw the outline of John, the person you just read about.`;
+    
+    const completedBlocksCount = session.blocks?.length || 0;
+    const currentBlockPosition = completedBlocksCount + 1;
+    const personName = getPersonName();
+    
+    if (currentBlockPosition === 2) {
+      return `Now, in between the house and the tree, please <strong><u>REDRAW</u></strong> the outline of <strong>${personName},</strong> the person you just read about.`;
+    } else if (currentBlockPosition === 3) {
+      return `Now, in between the house and the tree, please draw the outline of <strong>${personName}, the NEW person</strong> you just read about.`;
+    } else {
+      return `Now, in between the house and the tree, please draw the outline of ${personName}, the person you just read about.`;
+    }
+  };
+
   useEffect(() => {
     if (!session) {
       router.push('/consent');
@@ -239,13 +269,12 @@ const DrawDominancePage: React.FC = () => {
         <DialogContent className="sm:max-w-[725px]">
           <DialogHeader>
             <DialogTitle>Directions</DialogTitle>
-            <DialogDescription className="text-lg text-black">
-              Now, in between the house and the tree, please draw the outline of John, the person you just read about.
-              It should be a simple outline—kind of like a gingerbread man.
-              <b> Do NOT draw a stick figure. </b>
-              Please ask the experimenter if you have any questions.
-              When you are finished with your drawing, press Done.
-            </DialogDescription>
+            <DialogDescription 
+              className="text-lg text-black"
+              dangerouslySetInnerHTML={{
+                __html: `${getModalText()} It should be a simple outline—kind of like a gingerbread man. <b>Do NOT draw a stick figure.</b> Please ask the experimenter if you have any questions. When you are finished with your drawing, press Done.`
+              }}
+            />
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => setShowModal(false)}>Got it</Button>

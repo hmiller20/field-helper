@@ -4,24 +4,26 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BlockType, getCurrentSession } from "@/utils/sessionData";
 import { capitalize } from "@/utils/capitalize";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 // Default prep text
 const PREP_TEXT = {
-  control: "In the next screen you'll read a short description of a control individual. Imagine what this person looks like and acts like—you'll draw them later.",
-  prestige: "In the next screen you'll read a short description of a prestige individual. Imagine what this person looks like and acts like—you'll draw them later.",
-  dominance: "In the next screen you'll read a short description of a dominance individual. Imagine what this person looks like and acts like—you'll draw them later."
+  control: "Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.",
+  prestige: "Now you will read about Bill, another person being considered for a similar position at a different company in town. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.",
+  dominance: "Now you will read about Bill, another person being considered for a similar position at a different company in town. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later."
 };
 
-// Second block versions (placeholder text - will be edited later)
+// Second block versions (when it's the first prestige/dominance block about John)
 const PREP_TEXT_SECOND_BLOCK = {
-  control: "In the next screen you'll read a short description of a control individual. Imagine what this person looks like and acts like—you'll draw them later.", // control text doesn't change
-  prestige: "Second block prestige prep text - placeholder to be edited later. Imagine what this person looks like and acts like—you'll draw them later.",
-  dominance: "Second block dominance prep text - placeholder to be edited later. Imagine what this person looks like and acts like—you'll draw them later."
+  control: "Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.", // control text doesn't change
+  prestige: "We are now going to reveal more information about John. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.",
+  dominance: "We are now going to <strong>reveal more information about John</strong>. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later."
 };
 
 const Prep = ({ blockType }: { blockType: BlockType }) => {
     const router = useRouter();
-    const [secondsLeft, setSecondsLeft] = useState(10);
+    const [canContinue, setCanContinue] = useState(false);
 
     // Function to determine if current block is second or third
     const getCurrentBlockPosition = (): number => {
@@ -40,42 +42,62 @@ const Prep = ({ blockType }: { blockType: BlockType }) => {
     const getPrepText = (): string => {
       const position = getCurrentBlockPosition();
       
+      console.log("=== PREP TEXT DEBUG ===");
+      console.log("Block type:", blockType);
+      console.log("Current position:", position);
+      console.log("Will use SECOND_BLOCK?", (blockType === 'prestige' || blockType === 'dominance') && position === 2);
+      
       // For prestige/dominance blocks, use different text if it's the second block
       if ((blockType === 'prestige' || blockType === 'dominance') && position === 2) {
+        console.log("Using SECOND_BLOCK text (John):", PREP_TEXT_SECOND_BLOCK[blockType]);
         return PREP_TEXT_SECOND_BLOCK[blockType];
       }
       
       // Default text for all other cases
+      console.log("Using main PREP_TEXT (Bill):", PREP_TEXT[blockType]);
       return PREP_TEXT[blockType];
     };
 
-    // simple countdown effect
+    // Timer effect - shorter duration for prep screen
     useEffect(() => {
-        if (secondsLeft === 0) return;
-        const id = setTimeout(() => setSecondsLeft(secondsLeft - 1), 1000);
-        return () => clearTimeout(id);
-    }, [secondsLeft]);
+        const timer = setTimeout(() => {
+            setCanContinue(true);
+        }, 10000); // 10 seconds
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleContinue = () => {
         router.push(`/vignette${capitalize(blockType)}`);
     };
 
     return (
-        <main className="flex flex-col items-center gap-6 p-8">
-          <h1 className="text-xl font-semibold">Please read carefully</h1>
-          <p className="max-w-lg text-center">
-            {getPrepText()}
-          </p>
-    
-          <button
-            className="rounded bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-40"
-            disabled={secondsLeft > 0}
-            onClick={handleContinue}
-          >
-            {secondsLeft > 0 ? `Continue in ${secondsLeft}` : "Continue"}
-          </button>
-        </main>
-      );
-    };
-    
-    export default Prep;
+        <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+            <Card className="w-full max-w-2xl">
+                <CardContent className="p-6 flex flex-col items-center gap-8">
+                    <div 
+                        className="text-center text-lg sm:text-xl leading-relaxed max-w-xl"
+                        dangerouslySetInnerHTML={{ __html: getPrepText() }}
+                    />
+
+                    <Button
+                        className={`w-48 h-16 text-xl bg-[#c1e6c1] text-black mt-4 ${
+                            canContinue ? "hover:bg-[#a8dba8]" : "cursor-not-allowed pointer-events-none"
+                        }`}
+                        variant="secondary"
+                        style={{ opacity: canContinue ? 1 : 0.5 }}
+                        onClick={canContinue ? handleContinue : undefined}
+                    >
+                        Continue
+                    </Button>
+                    {!canContinue && (
+                        <p className="text-sm text-gray-500 mt-2">
+                            The continue button will become available soon. Please read the instructions carefully.
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+export default Prep;

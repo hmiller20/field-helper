@@ -235,6 +235,18 @@ const DrawingPage: React.FC = () => {
     router.push(`/prep${capitalize(firstBlock)}`);
   };
 
+  // Function to get the modal text with conditional "redraw" styling for second block
+  const getModalText = (): string => {
+    const session = getCurrentSession();
+    if (!session) return `Now, in between the house and the tree, please draw the outline of John, the person you just read about.`;
+    
+    const completedBlocksCount = session.blocks?.length || 0;
+    const currentBlockPosition = completedBlocksCount + 1;
+    
+    // Control is always block 1, so it will always say "draw" not "redraw"
+    return `Now, in between the house and the tree, please draw the outline of John, the person you just read about.`;
+  };
+
   return (
     <>
       {/* Shadcn modal that appears over the drawing area */}
@@ -242,13 +254,12 @@ const DrawingPage: React.FC = () => {
         <DialogContent className="sm:max-w-[725px]">
           <DialogHeader>
             <DialogTitle>Directions</DialogTitle>
-            <DialogDescription className="text-lg text-black">
-              Now, in between the house and the tree, please draw the outline of John, the person you just read about.
-              It should be a simple outline—kind of like a gingerbread man.
-              <b> Do NOT draw a stick figure. </b>
-              Please ask the experimenter if you have any questions.
-              When you are finished with your drawing, press Done.
-            </DialogDescription>
+            <DialogDescription 
+              className="text-lg text-black"
+              dangerouslySetInnerHTML={{
+                __html: `${getModalText()} It should be a simple outline—kind of like a gingerbread man. <b>Do NOT draw a stick figure.</b> Please ask the experimenter if you have any questions. When you are finished with your drawing, press Done.`
+              }}
+            />
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => setShowModal(false)}>Got it</Button>

@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 const Vignettes = [
   {
     name: "control",
-    text: "A guy who is pretty normal.",
+    text: "John is a 35-year-old man who lives in a mid-sized city. He has brown hair and usually wears a suit to work. John graduated from college with a degree in business administration. He has been working in various professional roles for about ten years since graduation. John typically wakes up early each morning, has coffee and breakfast, then commutes to his office downtown.",
   }
 ]
 

@@ -1,11 +1,20 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
 export default function ExampleDrawingPage() {
   const router = useRouter()
+  const [canContinue, setCanContinue] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCanContinue(true);
+    }, 10000); // 10 seconds
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -26,19 +35,23 @@ export default function ExampleDrawingPage() {
                 className="max-w-xs h-auto border rounded-lg shadow-sm"
               />
             </div>
-            
-            <p className="text-center text-gray-600">
-              Take a moment to review this example, then click Continue when you're ready to proceed.
-            </p>
           </div>
 
           <Button
-            className="w-48 h-16 text-xl bg-[#c1e6c1] hover:bg-[#a8dba8] text-black"
+            className={`w-48 h-16 text-xl bg-[#c1e6c1] text-black mt-4 ${
+              canContinue ? "hover:bg-[#a8dba8]" : "cursor-not-allowed pointer-events-none"
+            }`}
             variant="secondary"
-            onClick={() => router.push('/prepControl')}
+            style={{ opacity: canContinue ? 1 : 0.5 }}
+            onClick={canContinue ? () => router.push('/prepControl') : undefined}
           >
             Continue
           </Button>
+          {!canContinue && (
+            <p className="text-sm text-gray-500 mt-2">
+              The continue button will become available soon. Please review the example carefully.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

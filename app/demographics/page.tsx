@@ -7,23 +7,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { updateSession } from '../utils/sessionData';
 
 export default function Demographics() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     age: '',
-    gender: '',
-    education: '',
-    ethnicity: '',
-    employment: '',
-    income: ''
+    gender: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Demographics submitted:', formData);
-    // TODO: Handle form submission (save data, etc.)
+    
+    // Save demographics data to session
+    updateSession({ 
+      demographics: {
+        age: formData.age,
+        gender: formData.gender
+      }
+    });
     
     // Navigate to debriefing page
     router.push('/debriefing');
@@ -65,12 +68,12 @@ export default function Demographics() {
                   onValueChange={(value: string) => setFormData(prev => ({ ...prev, gender: value }))}
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="male" id="male" />
-                    <Label htmlFor="male">Male</Label>
+                    <RadioGroupItem value="man" id="man" />
+                    <Label htmlFor="man">Man</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="female" id="female" />
-                    <Label htmlFor="female">Female</Label>
+                    <RadioGroupItem value="woman" id="woman" />
+                    <Label htmlFor="woman">Woman</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="non-binary" id="non-binary" />
@@ -85,89 +88,6 @@ export default function Demographics() {
                     <Label htmlFor="other">Other</Label>
                   </div>
                 </RadioGroup>
-              </div>
-
-              {/* Education */}
-              <div className="space-y-2">
-                <Label htmlFor="education">Highest Level of Education</Label>
-                <Select value={formData.education} onValueChange={(value: string) => setFormData(prev => ({ ...prev, education: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your education level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="high-school">High School</SelectItem>
-                    <SelectItem value="some-college">Some College</SelectItem>
-                    <SelectItem value="associates">Associate's Degree</SelectItem>
-                    <SelectItem value="bachelors">Bachelor's Degree</SelectItem>
-                    <SelectItem value="masters">Master's Degree</SelectItem>
-                    <SelectItem value="doctorate">Doctorate</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Ethnicity */}
-              <div className="space-y-3">
-                <Label>Race/Ethnicity (Check all that apply)</Label>
-                <div className="space-y-2">
-                  {[
-                    'American Indian or Alaska Native',
-                    'Asian',
-                    'Black or African American',
-                    'Hispanic or Latino',
-                    'Native Hawaiian or Other Pacific Islander',
-                    'White',
-                    'Other',
-                    'Prefer not to answer'
-                  ].map((option) => (
-                    <div key={option} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={option}
-                        className="rounded border-gray-300"
-                      />
-                      <Label htmlFor={option} className="font-normal">{option}</Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Employment */}
-              <div className="space-y-2">
-                <Label htmlFor="employment">Employment Status</Label>
-                <Select value={formData.employment} onValueChange={(value: string) => setFormData(prev => ({ ...prev, employment: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your employment status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employed-full">Employed full-time</SelectItem>
-                    <SelectItem value="employed-part">Employed part-time</SelectItem>
-                    <SelectItem value="self-employed">Self-employed</SelectItem>
-                    <SelectItem value="unemployed">Unemployed</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Income */}
-              <div className="space-y-2">
-                <Label htmlFor="income">Annual Household Income (USD)</Label>
-                <Select value={formData.income} onValueChange={(value: string) => setFormData(prev => ({ ...prev, income: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your income range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="under-25k">Under $25,000</SelectItem>
-                    <SelectItem value="25k-50k">$25,000 - $49,999</SelectItem>
-                    <SelectItem value="50k-75k">$50,000 - $74,999</SelectItem>
-                    <SelectItem value="75k-100k">$75,000 - $99,999</SelectItem>
-                    <SelectItem value="100k-150k">$100,000 - $149,999</SelectItem>
-                    <SelectItem value="150k-plus">$150,000 or more</SelectItem>
-                    <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="flex justify-center pt-4">

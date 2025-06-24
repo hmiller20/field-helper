@@ -50,9 +50,10 @@ const STORAGE_KEY = "session";
 
 /**
  * Get the current session from local storage.
- * Returns null if no session exists.
+ * Returns null if no session exists or if localStorage is not available (SSR).
  */
 export const getCurrentSession = (): Session | null => {
+  if (typeof window === 'undefined') return null; // SSR check
   const data = localStorage.getItem(STORAGE_KEY);
   if (!data) return null;
   try {
@@ -67,6 +68,7 @@ export const getCurrentSession = (): Session | null => {
  * Save the session to local storage.
  */
 export const setSession = (session: Session) => {
+  if (typeof window === 'undefined') return; // SSR check
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 };
 
@@ -87,6 +89,7 @@ export const updateSession = (updates: Partial<Session>) => {
  * If the stored data is a single object, it will be wrapped in an array.
  */
 export const getSessionData = (): Session[] => {
+  if (typeof window === 'undefined') return []; // SSR check
   const data = localStorage.getItem(STORAGE_KEY);
   if (!data) {
     return [];
@@ -104,6 +107,7 @@ export const getSessionData = (): Session[] => {
  * Save the array of session data objects to local storage.
  */
 export const setSessionData = (data: Session[]) => {
+  if (typeof window === 'undefined') return; // SSR check
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 };
 

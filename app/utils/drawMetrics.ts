@@ -15,8 +15,8 @@ export const calculateArea = (points: Point[]): number => {
   return Math.abs(area / 2);
 };
 
-export const calculateDrawingExtents = (shapes: Point[][]): { width: number; height: number } => {
-  if (shapes.length === 0) return { width: 0, height: 0 };
+export const calculateDrawingExtents = (shapes: Point[][]): { width: number; height: number; minY: number } => {
+  if (shapes.length === 0) return { width: 0, height: 0, minY: 0 };
 
   let minX = Infinity;
   let minY = Infinity;
@@ -35,5 +35,6 @@ export const calculateDrawingExtents = (shapes: Point[][]): { width: number; hei
   return {
     width: maxX - minX,
     height: maxY - minY,
+    minY: minY,
   };
 }; 

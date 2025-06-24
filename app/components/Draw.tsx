@@ -61,6 +61,7 @@ const Draw = ({ blockType }: Props) => {
         area: totalArea,
         maxWidth: extents.width,
         maxHeight: extents.height,
+        verticality: extents.minY,
         pngUrl: imageData,
       },
     });

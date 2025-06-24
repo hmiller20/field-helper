@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
 
 export default function ExampleDrawingPage() {
   const router = useRouter()
@@ -24,15 +25,17 @@ export default function ExampleDrawingPage() {
           
           <div className="flex flex-col items-center gap-4">
             <p className="text-center text-lg leading-relaxed">
-              In this study, you will draw some figures. Here's an example of what we're looking for in your drawings:
+              In this study, you will draw some figures. Here&apos;s an example of what we&apos;re looking for in your drawings:
             </p>
             
             {/* Gingerbread man example image */}
             <div className="flex justify-center">
-              <img 
+              <Image 
                 src="/gingerbread.png" 
                 alt="Gingerbread man example drawing"
                 className="max-w-xs h-auto border rounded-lg shadow-sm"
+                width={300}
+                height={300}
               />
             </div>
           </div>

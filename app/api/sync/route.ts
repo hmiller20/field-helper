@@ -13,7 +13,7 @@ console.log("AWS_SECRET_ACCESS_KEY:", process.env.AWS_SECRET_ACCESS_KEY ? "SET" 
 
 import { NextResponse } from "next/server";
 import { MongoClient, Db } from "mongodb";
-import { S3Client, PutObjectCommand, S3 } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 // Ensure you have these environment variables set.
 const uri = process.env.MONGODB_URI as string;
@@ -92,7 +92,7 @@ async function uploadImageToS3(imageData: string, sessionId: string): Promise<st
   }
 }
 
-async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
+async function connectToDatabase(): Promise<{ db: Db }> {
   // Connect to the database
   const client = new MongoClient(uri);
   try {
@@ -102,7 +102,7 @@ async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
     throw connErr;
   }
   const db = client.db(dbName);
-  return { client, db };
+  return { db };
 }
 
 export async function POST(request: Request) {
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { client, db } = await connectToDatabase();
+    const { db } = await connectToDatabase();
 
     // Use a single minimal collection for all sync logs.
     const collection = db.collection<Record<string, unknown>>("session_logs");

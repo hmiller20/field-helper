@@ -237,12 +237,6 @@ const DrawingPage: React.FC = () => {
 
   // Function to get the modal text with conditional "redraw" styling for second block
   const getModalText = (): string => {
-    const session = getCurrentSession();
-    if (!session) return `Now, in between the house and the tree, please draw the outline of John, the person you just read about.`;
-    
-    const completedBlocksCount = session.blocks?.length || 0;
-    const currentBlockPosition = completedBlocksCount + 1;
-    
     // Control is always block 1, so it will always say "draw" not "redraw"
     return `Now, in between the house and the tree, please draw the outline of John, the person you just read about.`;
   };

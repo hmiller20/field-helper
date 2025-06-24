@@ -81,7 +81,7 @@ const Vignette = ({ blockType }: { blockType: BlockType }) => {
     const updatedSession = getCurrentSession();
     console.log("=== VIGNETTE: Session after update ===", updatedSession);
     console.log("=== VIGNETTE: Session ID after update ===", updatedSession?.id);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
-import { updateSession } from '../utils/sessionData';
+import { updateSession, getCurrentSession, addCompletedSession, isSessionComplete } from '../utils/sessionData';
 
 export default function Demographics() {
   const router = useRouter();
@@ -20,13 +20,33 @@ export default function Demographics() {
     e.preventDefault();
     console.log('Demographics submitted:', formData);
     
-    // Save demographics data to session
+    const session = getCurrentSession();
+    if (!session) {
+      console.error('No current session found');
+      router.push('/consent');
+      return;
+    }
+    
+    // Always update the current session first to ensure all data is preserved
     updateSession({ 
       demographics: {
         age: formData.age,
         gender: formData.gender
       }
     });
+    
+    // Get the updated session to ensure we have all the latest data
+    const finalSession = getCurrentSession();
+    if (!finalSession) {
+      console.error('Failed to get updated session');
+      return;
+    }
+    
+    // Check if this is a complete session (has all 3 blocks)
+    if (isSessionComplete()) {
+      console.log('Session is complete, adding to completed sessions');
+      addCompletedSession(finalSession);
+    }
     
     // Navigate to debriefing page
     router.push('/debriefing');

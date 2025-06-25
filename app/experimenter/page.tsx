@@ -26,12 +26,27 @@ export default function ExperimenterPage() {
       return;
     }
     setError("");
+    
+    console.log("=== EXPERIMENTER PAGE: Saving data ===");
+    console.log("Experimenter:", experimenter);
+    console.log("Session Notes:", sessionNotes);
+    
     // Update the unified session data object with experimenter and sessionNotes.
     updateSessionData({
       experimenter,
       sessionNotes,
     });
-    console.log("Session Data:", getSessionData());
+    
+    // Verify the data was saved
+    const sessionData = getSessionData();
+    console.log("=== EXPERIMENTER PAGE: Session data after save ===");
+    console.log("Total sessions:", sessionData.length);
+    if (sessionData.length > 0) {
+      const mostRecent = sessionData[sessionData.length - 1];
+      console.log("Most recent session experimenter:", mostRecent.experimenter);
+      console.log("Most recent session notes:", mostRecent.sessionNotes);
+    }
+    
     router.push("/consent");
   };
 

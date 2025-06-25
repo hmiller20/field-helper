@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { v1 as uuidv1 } from "uuid"
-import { updateSessionData, getSessionData, getCurrentSession } from "@/utils/sessionData";
+import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionData } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
 import { ToastProvider, Toast, ToastDescription, ToastViewport } from "@/components/ui/toast";
 import PDFViewer from "@/components/PDFViewer";
@@ -14,7 +14,26 @@ export default function ConsentPage() {
   const [hasReadInfo, setHasReadInfo] = useState(false)
   const [toastOpen, setToastOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [sessionCount, setSessionCount] = useState(0)
   const router = useRouter()
+
+  // Update session count on component mount and when storage changes
+  React.useEffect(() => {
+    const updateSessionCount = () => {
+      const sessions = getSessionData();
+      setSessionCount(sessions.length);
+    };
+    
+    updateSessionCount();
+    
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      updateSessionCount();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [])
 
   const handleSync = async () => {
     if (isUploading) {
@@ -50,8 +69,11 @@ export default function ConsentPage() {
       const result = await response.json();
       console.log("Sync result:", result);
       
-      // Only clear localStorage after confirming successful upload
-      localStorage.removeItem("session");
+      // Only clear all session data after confirming successful upload
+      clearAllSessionData();
+      
+      // Update session count to reflect cleared data
+      setSessionCount(0);
       
       setToastOpen(true);
       setTimeout(() => {
@@ -73,9 +95,9 @@ export default function ConsentPage() {
             onClick={handleSync}
             variant="secondary"
             className="text-sm bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 shadow-sm transition-colors"
-            disabled={isUploading}
+            disabled={isUploading || sessionCount === 0}
           >
-            {isUploading ? "Uploading..." : "Upload Local Data"}
+            {isUploading ? "Uploading..." : `Upload Local Data (${sessionCount})`}
           </Button>
         </div>
 

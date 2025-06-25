@@ -47,29 +47,61 @@ export interface Session {
 }
 
 const STORAGE_KEY = "session";
+const COMPLETED_SESSIONS_KEY = "completedSessions";
+const CURRENT_SESSION_KEY = "currentSession";
 
 /**
- * Get the current session from local storage.
+ * Get the current active session from local storage.
  * Returns null if no session exists or if localStorage is not available (SSR).
  */
 export const getCurrentSession = (): Session | null => {
   if (typeof window === 'undefined') return null; // SSR check
-  const data = localStorage.getItem(STORAGE_KEY);
+  const data = localStorage.getItem(CURRENT_SESSION_KEY);
   if (!data) return null;
   try {
     return JSON.parse(data) as Session;
   } catch (error) {
-    console.error("Error parsing session from localStorage:", error);
+    console.error("Error parsing current session from localStorage:", error);
     return null;
   }
 };
 
 /**
- * Save the session to local storage.
+ * Save the current active session to local storage.
  */
 export const setSession = (session: Session) => {
   if (typeof window === 'undefined') return; // SSR check
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(session));
+};
+
+/**
+ * Get all completed sessions from local storage.
+ */
+export const getCompletedSessions = (): Session[] => {
+  if (typeof window === 'undefined') return []; // SSR check
+  const data = localStorage.getItem(COMPLETED_SESSIONS_KEY);
+  if (!data) return [];
+  try {
+    return JSON.parse(data) as Session[];
+  } catch (error) {
+    console.error("Error parsing completed sessions from localStorage:", error);
+    return [];
+  }
+};
+
+/**
+ * Add a completed session to the completed sessions array.
+ */
+export const addCompletedSession = (session: Session) => {
+  if (typeof window === 'undefined') return; // SSR check
+  const completedSessions = getCompletedSessions();
+  completedSessions.push(session);
+  localStorage.setItem(COMPLETED_SESSIONS_KEY, JSON.stringify(completedSessions));
+  
+  // Clear the current session since it's now completed
+  localStorage.removeItem(CURRENT_SESSION_KEY);
+  
+  console.log(`Session ${session.id} added to completed sessions. Total completed: ${completedSessions.length}`);
 };
 
 /**
@@ -85,30 +117,60 @@ export const updateSession = (updates: Partial<Session>) => {
 };
 
 /**
- * Retrieve the array of session data from local storage.
- * If the stored data is a single object, it will be wrapped in an array.
+ * Retrieve all session data from local storage (both current and completed sessions).
+ * Returns an array of all sessions ready for upload.
  */
 export const getSessionData = (): Session[] => {
   if (typeof window === 'undefined') return []; // SSR check
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) {
-    return [];
+  
+  const completedSessions = getCompletedSessions();
+  const currentSession = getCurrentSession();
+  
+  // Combine completed sessions with current session if it exists
+  const allSessions = [...completedSessions];
+  if (currentSession) {
+    allSessions.push(currentSession);
   }
-  try {
-    const parsedData = JSON.parse(data);
-    return Array.isArray(parsedData) ? parsedData : [parsedData];
-  } catch (error) {
-    console.error("Error parsing sessionData from localStorage:", error);
-    return [];
+  
+  // Also check for legacy format for backwards compatibility
+  const legacyData = localStorage.getItem(STORAGE_KEY);
+  if (legacyData) {
+    try {
+      const parsedData = JSON.parse(legacyData);
+      const legacySessions = Array.isArray(parsedData) ? parsedData : [parsedData];
+      // Add legacy sessions that aren't already in our new format
+      legacySessions.forEach(session => {
+        if (!allSessions.some(s => s.id === session.id)) {
+          allSessions.push(session);
+        }
+      });
+    } catch (error) {
+      console.error("Error parsing legacy sessionData from localStorage:", error);
+    }
   }
+  
+  console.log(`getSessionData(): Found ${completedSessions.length} completed + ${currentSession ? 1 : 0} current = ${allSessions.length} total sessions`);
+  return allSessions;
 };
 
 /**
  * Save the array of session data objects to local storage.
+ * @deprecated Use addCompletedSession instead for new sessions
  */
 export const setSessionData = (data: Session[]) => {
   if (typeof window === 'undefined') return; // SSR check
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+};
+
+/**
+ * Clear all session data from local storage after successful upload.
+ */
+export const clearAllSessionData = () => {
+  if (typeof window === 'undefined') return; // SSR check
+  localStorage.removeItem(COMPLETED_SESSIONS_KEY);
+  localStorage.removeItem(CURRENT_SESSION_KEY);
+  localStorage.removeItem(STORAGE_KEY); // Also clear legacy format
+  console.log("All session data cleared from localStorage");
 };
 
 /**
@@ -144,9 +206,44 @@ export const updateSessionData = (newData: Partial<Session>) => {
       const updatedSession = { ...currentSession, ...newData };
       setSession(updatedSession);
     } else {
-      console.error("No existing session found to update and no ID provided to create new session.");
+      // No current session - try to update the most recent completed session
+      console.log("No current session found, attempting to update most recent completed session");
+      updateMostRecentSession(newData);
     }
   }
+};
+
+/**
+ * Update the most recent session (either current or most recently completed).
+ * This is useful when adding experimenter data after a session has been completed.
+ */
+export const updateMostRecentSession = (newData: Partial<Session>) => {
+  if (typeof window === 'undefined') return; // SSR check
+  
+  // First try current session
+  const currentSession = getCurrentSession();
+  if (currentSession) {
+    const updatedSession = { ...currentSession, ...newData };
+    setSession(updatedSession);
+    console.log("Updated current session with experimenter data");
+    return;
+  }
+  
+  // If no current session, update the most recent completed session
+  const completedSessions = getCompletedSessions();
+  if (completedSessions.length === 0) {
+    console.error("No sessions found to update");
+    return;
+  }
+  
+  // Update the most recent completed session (last in array)
+  const mostRecentIndex = completedSessions.length - 1;
+  const updatedSession = { ...completedSessions[mostRecentIndex], ...newData };
+  completedSessions[mostRecentIndex] = updatedSession;
+  
+  // Save updated completed sessions back to localStorage
+  localStorage.setItem(COMPLETED_SESSIONS_KEY, JSON.stringify(completedSessions));
+  console.log(`Updated most recent completed session with experimenter data: ${updatedSession.id}`);
 };
 
 /**

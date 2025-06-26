@@ -17,8 +17,8 @@ import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
 // Drawing area validation constants
-const MIN_AREA = 3000;
-const MAX_AREA = 125000;
+const MIN_AREA = 4600; // 4602 was the 5th percentile area in the last study (n=215)
+const MAX_AREA = 59670; // 59668 was the 95th percentile area in the last study (n=215)
 
 const DrawingPage: React.FC = () => {
   // New ref that stores completed shapes (each as an array of points)
@@ -253,8 +253,8 @@ const DrawingPage: React.FC = () => {
   return (
     <>
       {/* Shadcn modal that appears over the drawing area */}
-      <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="sm:max-w-[725px]">
+      <Dialog open={showModal}>
+        <DialogContent className="sm:max-w-[725px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Directions</DialogTitle>
             <DialogDescription 

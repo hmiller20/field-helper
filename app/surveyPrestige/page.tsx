@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { updateSession } from "@/utils/sessionData"
+import { updateSession, getCurrentSession } from "@/utils/sessionData"
 
 // Types for our survey questions
 type QuestionType = "likert";
@@ -19,17 +19,17 @@ type Question = {
   options?: string[];
 };
 
-const questions: Question[] = [
+const baseQuestions: Question[] = [
   // Manipulation check items
   {
     id: "domManip1_p",
-    text: "John is willing to use aggressive tactics to get his way.",
+    text: "[NAME] is willing to use aggressive tactics to get his way.",
     category: "manipulation",
     questionType: "likert",
   },
   {
     id: "domManip2_p",
-    text: "Others know it is better to let John have his way.",
+    text: "Others know it is better to let [NAME] have his way.",
     category: "manipulation",
     questionType: "likert",
   },
@@ -41,48 +41,63 @@ const questions: Question[] = [
   },
   {
     id: "preManip1_p",
-    text: "John's unique talents and abilities are recognized by others.",
+    text: "[NAME]'s unique talents and abilities are recognized by others.",
     category: "manipulation",
     questionType: "likert",
   },
   {
     id: "preManip2_p",
-    text: "John is considered an expert on some matters by others.",
+    text: "[NAME] is considered an expert on some matters by others.",
     category: "manipulation",
     questionType: "likert",
   },
   {
     id: "virtManip1_p",
-    text: "When John makes decisions, he pursues the most ethical course of action.",
+    text: "When [NAME] makes decisions, he pursues the most ethical course of action.",
     category: "manipulation",
     questionType: "likert",
   },
   {
     id: "virtManip2_p",
-    text: "Others follow John because of his strong moral character.",
+    text: "Others follow [NAME] because of his strong moral character.",
     category: "manipulation",
     questionType: "likert",
   },
   {
     id: "statusManip1_p",
-    text: "John has a lot of influence over others.",
+    text: "[NAME] has a lot of influence over others.",
     category: "manipulation",
     questionType: "likert",
   },
   {
     id: "statusManip2_p",
-    text: "John seeks out leadership opportunities regularly.",
+    text: "[NAME] seeks out leadership opportunities regularly.",
     category: "manipulation",
     questionType: "likert",
   },
-
-  
-  
 ]
 
 export default function SurveyPrestigePage() {
   const [responses, setResponses] = useState<Record<string, string | number>>({})
   const router = useRouter()
+
+  // Function to determine person's name based on block position
+  const getPersonName = (): string => {
+    const session = getCurrentSession();
+    if (!session) return "John"; // default
+    
+    const completedBlocksCount = session.blocks?.length || 0;
+    const currentBlockPosition = completedBlocksCount + 1;
+    
+    // Control is block 1 (John), second block is John, third block is Bill
+    return currentBlockPosition === 3 ? "Bill" : "John";
+  };
+
+  // Create questions with the appropriate name substituted
+  const questions = baseQuestions.map(question => ({
+    ...question,
+    text: question.text.replace(/\[NAME\]/g, getPersonName())
+  }));
 
   const isComplete = questions.every((q) => responses[q.id] !== undefined && responses[q.id] !== "")
 

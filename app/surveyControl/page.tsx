@@ -34,7 +34,7 @@ const questions: Question[] = [
     questionType: "likert",
   },
   {
-    id: "attnCheck_c",
+    id: "attnCheck3_c",
     text: "If you are paying attention, select option three.",
     category: "attention",
     questionType: "likert",
@@ -48,18 +48,6 @@ const questions: Question[] = [
   {
     id: "preManip2_c",
     text: "John is considered an expert on some matters by others.",
-    category: "manipulation",
-    questionType: "likert",
-  },
-  {
-    id: "virtManip1_c",
-    text: "When John makes decisions, he pursues the most ethical course of action.",
-    category: "manipulation",
-    questionType: "likert",
-  },
-  {
-    id: "virtManip2_c",
-    text: "Others follow John because of his strong moral character.",
     category: "manipulation",
     questionType: "likert",
   },

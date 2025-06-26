@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 // Import shadcn modal components and button component
 import {
   Dialog,
-  DialogContent,
+  DrawDialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -254,7 +254,7 @@ const DrawingPage: React.FC = () => {
     <>
       {/* Shadcn modal that appears over the drawing area */}
       <Dialog open={showModal}>
-        <DialogContent className="sm:max-w-[725px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+        <DrawDialogContent className="sm:max-w-[725px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Directions</DialogTitle>
             <DialogDescription 
@@ -283,12 +283,12 @@ const DrawingPage: React.FC = () => {
               </p>
             )}
           </DialogFooter>
-        </DialogContent>
+        </DrawDialogContent>
       </Dialog>
 
       {/* Area validation warning dialog */}
       <Dialog open={showAreaWarning} onOpenChange={setShowAreaWarning}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DrawDialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Drawing Size Issue</DialogTitle>
             <DialogDescription className="text-lg text-black">
@@ -298,7 +298,7 @@ const DrawingPage: React.FC = () => {
           <DialogFooter>
             <Button onClick={() => setShowAreaWarning(false)}>OK</Button>
           </DialogFooter>
-        </DialogContent>
+        </DrawDialogContent>
       </Dialog>
 
       <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">

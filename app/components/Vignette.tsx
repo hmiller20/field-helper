@@ -9,9 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 const VIGNETTES: Record<BlockType, string> = {
   control: "John is a 35-year-old man who lives in a mid-sized city. He has brown hair and usually wears business casual clothing to work. John graduated from college with a degree in business administration. He has been working in various professional roles for about ten years since graduation. John typically wakes up early each morning, has coffee and breakfast, then commutes to his office downtown.",
   prestige:
-    "A company is hiring a new CEO, and Bill is being considered for the position. Bill has several years of workplace experience and has gained a considerable degree of influence over others. His leadership strategy focuses on leveraging his skills and abilities to influence others. In leadership roles, he fosters positive relationships and teamwork among his subordinates. Bill generally takes input from others on how tasks should be accomplished, although he is also good at making suggestions about how to improve ideas provided by others. When Bill's subordinates have good ideas, they feel comfortable bringing them up and asking to implement them, even when those ideas are contrary to Bill's view of the situation. Many subordinates follow Bill's advice because they respect and admire him. In sum, Bill adopts a leadership style focused on making skillful decisions.",
+    "A company is hiring a new CEO, and <strong>Bill</strong> is being considered for the position. Bill has several years of workplace experience and has gained a considerable degree of influence over others. His leadership strategy focuses on <strong>leveraging his skills and abilities</strong> to influence others. In leadership roles, he fosters positive relationships and teamwork among his subordinates. Bill generally takes input from others on how tasks should be accomplished, although he is also good at making suggestions about how to improve ideas provided by others. When Bill's subordinates have good ideas, they feel comfortable bringing them up and asking to implement them, even when those ideas are contrary to Bill's view of the situation. Many subordinates follow Bill's advice because they <strong>respect and admire him</strong>. In sum, Bill adopts a leadership style focused on making <strong>skillful decisions</strong>.",
   dominance:
-    "A company is hiring a new CEO, and Bill is being considered for the position. Bill has several years of workplace experience and has gained a considerable degree of influence over others. Bill has aggressively moved through the ranks into a position of leadership. He is a dominant leader who prioritizes having control and authority over the people who report to him. When Bill makes a decision, that decision is final, even when others disagree. Bill has his own views of how tasks should be accomplished, and he uses reward and punishment to get people to follow his ideas. Although his subordinates sometimes have good ideas, those subordinates know it is better to let Bill have his way rather than contradict his ideas. Many subordinates fear Bill, and for that reason they follow his orders. In sum, Bill adopts a dominant leadership style focused on making definitive decisions.",
+    "A company is hiring a new CEO, and <strong>Bill</strong> is being considered for the position. Bill has several years of workplace experience and has gained a considerable degree of influence over others. Bill has <strong>aggressively moved through the ranks</strong> into a position of leadership. He is a <strong>dominant leader</strong> who prioritizes having control and authority over the people who report to him. When Bill makes a decision, that decision is <strong>final</strong>, even when others disagree. Bill has his own views of how tasks should be accomplished, and he uses reward and punishment to get people to follow his ideas. Although his subordinates sometimes have good ideas, those subordinates know it is better to let Bill have his way rather than contradict his ideas. Many subordinates <strong>fear Bill</strong>, and for that reason they follow his orders. In sum, Bill adopts a dominant leadership style focused on making <strong>definitive decisions</strong>.",
 };
 
 // Second block versions (more information about John)
@@ -94,9 +94,10 @@ const Vignette = ({ blockType }: { blockType: BlockType }) => {
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-2xl">
         <CardContent className="p-6 flex flex-col items-center gap-8">
-          <div className="text-left text-lg sm:text-xl leading-relaxed max-w-xl">
-            {getVignetteText()}
-          </div>
+          <div 
+            className="text-left text-lg sm:text-xl leading-relaxed max-w-xl"
+            dangerouslySetInnerHTML={{ __html: getVignetteText() }}
+          />
 
           <Button
             className={`w-48 h-16 text-xl bg-[#c1e6c1] text-black mt-4 ${

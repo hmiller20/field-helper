@@ -34,12 +34,6 @@ const baseQuestions: Question[] = [
     questionType: "likert",
   },
   {
-    id: "attnCheck_d",
-    text: "If you are paying attention, select option three.",
-    category: "attention",
-    questionType: "likert",
-  },
-  {
     id: "preManip1_d",
     text: "[NAME]'s unique talents and abilities are recognized by others.",
     category: "manipulation",
@@ -52,15 +46,9 @@ const baseQuestions: Question[] = [
     questionType: "likert",
   },
   {
-    id: "virtManip1_d",
-    text: "When [NAME] makes decisions, he pursues the most ethical course of action.",
-    category: "manipulation",
-    questionType: "likert",
-  },
-  {
-    id: "virtManip2_d",
-    text: "Others follow [NAME] because of his strong moral character.",
-    category: "manipulation",
+    id: "attnCheck5_d",
+    text: "If you are paying attention, select option five.",
+    category: "attention",
     questionType: "likert",
   },
   {

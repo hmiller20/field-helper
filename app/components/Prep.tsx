@@ -10,15 +10,15 @@ import { Card, CardContent } from "@/components/ui/card";
 // Default prep text
 const PREP_TEXT = {
   control: "Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.",
-  prestige: "Now you will read about Bill, another person being considered for a similar position at a different company in town. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.",
-  dominance: "Now you will read about Bill, another person being considered for a similar position at a different company in town. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later."
+  prestige: "Now you will read about <strong>Bill,</strong> another person being considered for a similar position at a different company in town. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.",
+  dominance: "Now you will read about <strong>Bill,</strong> another person being considered for a similar position at a different company in town. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later."
 };
 
 // Second block versions (when it's the first prestige/dominance block about John)
 const PREP_TEXT_SECOND_BLOCK = {
   control: "Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.", // control text doesn't change
-  prestige: "We are now going to <strong>share more information about John</strong>. Please read the following description carefully.",
-  dominance: "We are now going to <strong>share more information about John</strong>. Please read the following description carefully."
+  prestige: "We are now going to <strong>share more information about John.</strong> Please read the following description carefully.",
+  dominance: "We are now going to <strong>share more information about John.</strong> Please read the following description carefully."
 };
 
 const Prep = ({ blockType }: { blockType: BlockType }) => {

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { BlockType, Session, getCurrentSession, updateSession } from "@/utils/sessionData";
 import { calculateArea, calculateDrawingExtents } from "@/utils/drawMetrics";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import html2canvas from "html2canvas";
 
 interface Props {
@@ -18,7 +18,16 @@ const Draw = ({ blockType }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [canContinue, setCanContinue] = useState(false);
   const shapesRef = useRef<Array<Array<{ x: number; y: number }>>>([]);
+
+  // Timer effect - 10 seconds like prep pages
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCanContinue(true);
+    }, 10000); // 10 seconds
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleDone = async () => {
     if (!canvasRef.current) return;
@@ -111,11 +120,22 @@ const Draw = ({ blockType }: Props) => {
         }}
       />
       <button
-        className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
-        onClick={handleDone}
+        className={`rounded px-4 py-2 font-medium text-white ${
+          canContinue 
+            ? "bg-blue-600 hover:bg-blue-700" 
+            : "bg-gray-400 cursor-not-allowed"
+        }`}
+        style={{ opacity: canContinue ? 1 : 0.5 }}
+        onClick={canContinue ? handleDone : undefined}
+        disabled={!canContinue}
       >
         Done
       </button>
+      {!canContinue && (
+        <p className="text-sm text-gray-500 mt-2">
+          The done button will become available soon. Please take your time with the drawing.
+        </p>
+      )}
     </div>
   );
 };

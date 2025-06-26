@@ -26,11 +26,20 @@ const DrawingPage: React.FC = () => {
   const [showModal, setShowModal] = useState(true);
   const [showAreaWarning, setShowAreaWarning] = useState(false);
   const [areaWarningMessage, setAreaWarningMessage] = useState("");
+  const [canContinue, setCanContinue] = useState(false);
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef<boolean>(false);
   const shapePointsRef = useRef<{ x: number; y: number }[]>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Timer effect - 10 seconds like prep pages
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCanContinue(true);
+    }, 10000); // 10 seconds
+    return () => clearTimeout(timer);
+  }, []);
 
   // Adjust the canvas dimensions on mount
   useEffect(() => {
@@ -256,7 +265,23 @@ const DrawingPage: React.FC = () => {
             />
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => setShowModal(false)}>Got it</Button>
+            <Button 
+              className={`${
+                canContinue 
+                  ? "bg-[#c1e6c1] hover:bg-[#a8dba8] text-black" 
+                  : "bg-gray-400 cursor-not-allowed text-white"
+              }`}
+              style={{ opacity: canContinue ? 1 : 0.5 }}
+              onClick={canContinue ? () => setShowModal(false) : undefined}
+              disabled={!canContinue}
+            >
+              Got it
+            </Button>
+            {!canContinue && (
+              <p className="text-sm text-gray-500 mt-2">
+                Please read the instructions carefully. The button will become available soon.
+              </p>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

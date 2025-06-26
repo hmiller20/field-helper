@@ -17,7 +17,7 @@ const PREP_TEXT = {
 // Second block versions (when it's the first prestige/dominance block about John)
 const PREP_TEXT_SECOND_BLOCK = {
   control: "Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.", // control text doesn't change
-  prestige: "We are now going to share more information about John. Please read the following description carefully.",
+  prestige: "We are now going to <strong>share more information about John</strong>. Please read the following description carefully.",
   dominance: "We are now going to <strong>share more information about John</strong>. Please read the following description carefully."
 };
 

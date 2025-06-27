@@ -38,18 +38,30 @@ Replace with your actual Supabase credentials.
 In your Supabase dashboard, go to SQL Editor and run this query to create the table:
 
 ```sql
+-- Clean up existing table structure
+-- Step 1: Drop the created_at column (not needed)
+ALTER TABLE researcher_sessions DROP COLUMN IF EXISTS created_at;
+
+-- Step 2: Add a simple auto-incrementing primary key
+ALTER TABLE researcher_sessions ADD COLUMN session_id SERIAL PRIMARY KEY;
+
+-- Step 3: Convert timestamp columns to TEXT to store time-only format (HH:MM:SS)
+ALTER TABLE researcher_sessions 
+ALTER COLUMN sign_in_time TYPE TEXT,
+ALTER COLUMN sign_out_time TYPE TEXT;
+
+-- For creating the table from scratch (clean version):
 CREATE TABLE researcher_sessions (
-  id TEXT PRIMARY KEY,
+  session_id SERIAL PRIMARY KEY,      -- Auto-incrementing ID (1, 2, 3, etc.)
   researcher_name TEXT NOT NULL,
-  sign_in_time TIMESTAMPTZ NOT NULL,
-  sign_out_time TIMESTAMPTZ,
-  date DATE NOT NULL,
+  sign_in_time TEXT NOT NULL,         -- Time only: "09:51:10"
+  sign_out_time TEXT,                 -- Time only: "17:30:45"
+  date DATE NOT NULL,                 -- Date in EST: "2025-06-27"
   duration_hours DECIMAL(5,2),
-  sessions_completed INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  sessions_completed INTEGER DEFAULT 0
 );
 
--- Create an index for faster queries
+-- Create indexes for faster queries
 CREATE INDEX idx_researcher_sessions_researcher_name ON researcher_sessions(researcher_name);
 CREATE INDEX idx_researcher_sessions_date ON researcher_sessions(date);
 ```

@@ -10,35 +10,54 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Database types for type safety
 export interface ResearcherSessionDB {
-  id: string
   researcher_name: string
-  sign_in_time: string // ISO string
-  sign_out_time?: string // ISO string
+  sign_in_time: string // Time only: "09:51:10"
+  sign_out_time?: string // Time only: "17:30:45"
   date: string // YYYY-MM-DD
   duration_hours?: number
   sessions_completed?: number // Number of sessions completed during this shift
-  created_at?: string
 }
 
-// Function to convert our local ResearcherSession to DB format
+  // Function to convert our local ResearcherSession to DB format
 export const convertToDBFormat = (session: any): ResearcherSessionDB => {
   const duration = session.signOutTime 
     ? (session.signOutTime - session.signInTime) / (1000 * 60 * 60)
     : null
 
-  // Convert EST timestamps to ISO strings with timezone info
-  const signInDate = new Date(session.signInTime);
-  const signInEST = signInDate.toLocaleString('sv-SE', { timeZone: 'America/New_York' }) + '-05:00'; // Approximate EST format
-  
-  const signOutEST = session.signOutTime 
-    ? new Date(session.signOutTime).toLocaleString('sv-SE', { timeZone: 'America/New_York' }) + '-05:00'
-    : undefined;
+  // Convert timestamps to time-only format (HH:MM:SS)
+  const toTimeString = (timestamp: number): string => {
+    // Create a new date object
+    const utcDate = new Date(timestamp);
+    
+    // Get EST time using toLocaleString with timezone
+    const estTime = utcDate.toLocaleString('en-US', {
+      timeZone: 'America/New_York',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    // This returns format "HH:MM:SS"
+    return estTime;
+  };
+
+  const signInTime = toTimeString(session.signInTime);
+  const signOutTime = session.signOutTime ? toTimeString(session.signOutTime) : undefined;
+
+  // Debug logging to see what we're sending to Supabase
+  console.log('Converting timestamps for Supabase:');
+  console.log('Original signInTime:', session.signInTime, '→', new Date(session.signInTime).toString());
+  console.log('Time-only signInTime:', signInTime);
+  if (session.signOutTime) {
+    console.log('Original signOutTime:', session.signOutTime, '→', new Date(session.signOutTime).toString());
+    console.log('Time-only signOutTime:', signOutTime);
+  }
 
   return {
-    id: session.id,
     researcher_name: session.researcherName,
-    sign_in_time: signInEST,
-    sign_out_time: signOutEST,
+    sign_in_time: signInTime,
+    sign_out_time: signOutTime,
     date: session.date,
     duration_hours: duration ? parseFloat(duration.toFixed(2)) : undefined,
     sessions_completed: session.sessionsCompleted || 0,

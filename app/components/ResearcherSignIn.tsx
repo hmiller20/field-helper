@@ -30,9 +30,12 @@ const CORRECT_PASSWORD = "5678"
 export default function ResearcherSignIn() {
   const [currentResearcher, setCurrentResearcher] = useState<any>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false)
   const [selectedResearcher, setSelectedResearcher] = useState("")
   const [password, setPassword] = useState("")
+  const [signOutPassword, setSignOutPassword] = useState("")
   const [error, setError] = useState("")
+  const [signOutError, setSignOutError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
   // Check for existing researcher session on mount
@@ -76,17 +79,44 @@ export default function ResearcherSignIn() {
     }
   }
 
-  const handleSignOut = async () => {
+  const handleSignOutClick = () => {
+    setSignOutError("")
+    setSignOutPassword("")
+    setIsSignOutDialogOpen(true)
+  }
+
+  const handleSignOutConfirm = async () => {
+    setSignOutError("")
+    
+    if (!signOutPassword) {
+      setSignOutError("Please enter the password")
+      return
+    }
+    
+    if (signOutPassword !== CORRECT_PASSWORD) {
+      setSignOutError("Incorrect password")
+      return
+    }
+    
     setIsLoading(true)
     
     try {
       await signOutResearcher()
       setCurrentResearcher(null)
+      setIsSignOutDialogOpen(false)
+      setSignOutPassword("")
     } catch (error) {
       console.error("Failed to sign out:", error)
+      setSignOutError("Failed to sign out. Please try again.")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSignOutCancel = () => {
+    setIsSignOutDialogOpen(false)
+    setSignOutPassword("")
+    setSignOutError("")
   }
 
   const handleViewRemoteData = async () => {
@@ -194,37 +224,71 @@ export default function ResearcherSignIn() {
     const sessionsCompleted = getSessionCount()
 
     return (
-      <div className="flex flex-col gap-2">
+      <>
         <Button
-          onClick={handleSignOut}
+          onClick={handleSignOutClick}
           variant="outline"
           className="text-sm bg-green-50 text-green-800 border border-green-300 hover:bg-green-100 shadow-sm transition-colors"
           disabled={isLoading}
         >
-          {isLoading ? "Signing out..." : `${currentResearcher.researcherName} - Sign Out`}
+          {isLoading ? "Signing out..." : `Sign Out`}
         </Button>
-        <div className="text-xs text-gray-600 text-center">
-          Signed in: {signInTime} EST ({hours}h {minutes}m)
-          <br />
-          Sessions completed: {sessionsCompleted}
-        </div>
-        <div className="flex gap-1">
-          <Button
-            onClick={handleViewRemoteData}
-            variant="ghost"
-            className="text-xs text-blue-500 hover:text-blue-700 h-6 flex-1"
-          >
-            View Hours
-          </Button>
-          <Button
-            onClick={handleExportData}
-            variant="ghost"
-            className="text-xs text-gray-500 hover:text-gray-700 h-6 flex-1"
-          >
-            Export
-          </Button>
-        </div>
-      </div>
+
+        {/* Sign-out confirmation dialog */}
+        <Dialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Sign-Out</DialogTitle>
+            </DialogHeader>
+            <Card className="p-4 space-y-4">
+              <p className="text-sm text-gray-600">
+                Enter the password to confirm sign-out for <strong>{currentResearcher.researcherName}</strong>
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="signout-password">Password</Label>
+                <Input
+                  id="signout-password"
+                  type="password"
+                  value={signOutPassword}
+                  onChange={(e) => setSignOutPassword(e.target.value)}
+                  placeholder="Enter password"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSignOutConfirm()
+                    }
+                  }}
+                />
+              </div>
+
+              {signOutError && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                  {signOutError}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSignOutConfirm}
+                  disabled={isLoading}
+                  className="flex-1"
+                  variant="destructive"
+                >
+                  {isLoading ? "Signing out..." : "Confirm Sign Out"}
+                </Button>
+                <Button
+                  onClick={handleSignOutCancel}
+                  variant="outline"
+                  className="flex-1"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </Card>
+          </DialogContent>
+        </Dialog>
+      </>
     )
   }
 

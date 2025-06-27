@@ -27,7 +27,7 @@ export default function Demographics() {
       return;
     }
     
-    // Always update the current session first to ensure all data is preserved
+    // Always update the current session first to make sure that all data is preserved
     updateSession({ 
       demographics: {
         age: formData.age,

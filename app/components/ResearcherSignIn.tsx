@@ -10,8 +10,7 @@ import { Card } from "@/components/ui/card"
 import { 
   getCurrentResearcher, 
   signInResearcher, 
-  signOutResearcher, 
-  getSessionCount
+  signOutResearcher
 } from "@/utils/sessionData"
 
 // List of researchers - you can modify this list as needed

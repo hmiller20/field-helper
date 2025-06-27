@@ -37,10 +37,3 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
-
-// Handle messages from the app
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});

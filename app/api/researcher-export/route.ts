@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const dataDir = join(process.cwd(), 'data')
     try {
       await mkdir(dataDir, { recursive: true })
-    } catch (error) {
+    } catch {
       // Directory might already exist, ignore error
     }
     

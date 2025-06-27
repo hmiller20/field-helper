@@ -11,10 +11,8 @@ import {
   getCurrentResearcher, 
   signInResearcher, 
   signOutResearcher, 
-  exportResearcherData,
   getSessionCount
 } from "@/utils/sessionData"
-import { formatESTDateTime, formatESTTime } from "@/utils/timezone"
 
 // List of researchers - you can modify this list as needed
 const RESEARCHERS = [
@@ -27,8 +25,19 @@ const RESEARCHERS = [
 
 const CORRECT_PASSWORD = "5678"
 
+// Type definitions for better type safety
+interface ResearcherSession {
+  id: string
+  researcherName: string
+  signInTime: number
+  signOutTime?: number
+  date: string
+  sessionsCompleted?: number
+  note?: string
+}
+
 export default function ResearcherSignIn() {
-  const [currentResearcher, setCurrentResearcher] = useState<any>(null)
+  const [currentResearcher, setCurrentResearcher] = useState<ResearcherSession | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false)
   const [selectedResearcher, setSelectedResearcher] = useState("")
@@ -65,7 +74,7 @@ export default function ResearcherSignIn() {
     setIsLoading(true)
     
     try {
-      const sessionId = signInResearcher(selectedResearcher)
+      signInResearcher(selectedResearcher)
       const newResearcher = getCurrentResearcher()
       setCurrentResearcher(newResearcher)
       setIsDialogOpen(false)
@@ -73,6 +82,7 @@ export default function ResearcherSignIn() {
       setPassword("")
       setError("")
     } catch (error) {
+      console.error("Sign-in error:", error)
       setError("Failed to sign in. Please try again.")
     } finally {
       setIsLoading(false)
@@ -119,110 +129,8 @@ export default function ResearcherSignIn() {
     setSignOutError("")
   }
 
-  const handleViewRemoteData = async () => {
-    try {
-      const response = await fetch('/api/researcher');
-      if (response.ok) {
-        const result = await response.json();
-        const sessions = result.data;
-        
-                 // Calculate totals
-         const totalHours = sessions.reduce((sum: number, session: any) => 
-           sum + (session.duration_hours || 0), 0);
-         const totalSessionsCompleted = sessions.reduce((sum: number, session: any) => 
-           sum + (session.sessions_completed || 0), 0);
-        
-                 // Create summary by researcher
-         const summary = sessions.reduce((acc: any, session: any) => {
-           if (!acc[session.researcher_name]) {
-             acc[session.researcher_name] = { shifts: 0, hours: 0, totalSessions: 0 };
-           }
-           acc[session.researcher_name].shifts++;
-           acc[session.researcher_name].hours += session.duration_hours || 0;
-           acc[session.researcher_name].totalSessions += session.sessions_completed || 0;
-           return acc;
-         }, {});
-         
-         const summaryText = Object.entries(summary)
-           .map(([name, data]: [string, any]) => 
-             `${name}: ${data.shifts} shifts, ${data.hours.toFixed(1)} hours, ${data.totalSessions} sessions completed`)
-           .join('\n');
-        
-                 alert(
-           `Remote Researcher Data Summary:\n\n` +
-           `Total Shifts: ${sessions.length}\n` +
-           `Total Hours: ${totalHours.toFixed(1)}\n` +
-           `Total Sessions Completed: ${totalSessionsCompleted}\n\n` +
-           `By Researcher:\n${summaryText}\n\n` +
-           `Check browser console for detailed data.`
-         );
-        
-        console.log('Full researcher sessions data:', sessions);
-      } else {
-        alert('Failed to fetch remote data. Check your internet connection.');
-      }
-    } catch (error) {
-      console.error("Failed to fetch remote data:", error);
-      alert("Failed to fetch remote data. Please try again.");
-    }
-  }
-
-  const handleExportData = async () => {
-    try {
-      // Export from Supabase instead of localStorage
-      const response = await fetch('/api/researcher');
-      if (response.ok) {
-        const result = await response.json();
-        const data = result.data;
-        
-                 // Convert to CSV-like format for easy Excel import with EST times
-         const csvData = data.map((session: any) => ({
-           researcherName: session.researcher_name,
-           date: session.date,
-           signInTime: formatESTDateTime(new Date(session.sign_in_time).getTime()) + ' EST',
-           signOutTime: session.sign_out_time ? formatESTDateTime(new Date(session.sign_out_time).getTime()) + ' EST' : "Still signed in",
-           durationHours: session.duration_hours || 0,
-           sessionsCompleted: session.sessions_completed || 0,
-           sessionId: session.id
-         }));
-        
-        const jsonData = JSON.stringify(csvData, null, 2);
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `researcher-hours-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else {
-        // Fallback to local data if Supabase fails
-        const rawData = exportResearcherData();
-        const blob = new Blob([rawData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `researcher-hours-local-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    } catch (error) {
-      console.error("Failed to export data:", error);
-      alert("Failed to export data. Please try again.");
-    }
-  }
-
   // If researcher is signed in, show sign-out button
   if (currentResearcher) {
-    const signInTime = formatESTTime(currentResearcher.signInTime)
-    const duration = Date.now() - currentResearcher.signInTime
-    const hours = Math.floor(duration / (1000 * 60 * 60))
-    const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60))
-    const sessionsCompleted = getSessionCount()
-
     return (
       <>
         <Button

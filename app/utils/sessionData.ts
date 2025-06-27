@@ -569,7 +569,7 @@ export const signOutResearcher = async (): Promise<void> => {
   
   // Add the current session count to the researcher session
   const sessionsCompleted = getSessionCount();
-  (currentResearcher as any).sessionsCompleted = sessionsCompleted;
+  (currentResearcher as ResearcherSession & { sessionsCompleted: number }).sessionsCompleted = sessionsCompleted;
   
   const duration = signOutTime - currentResearcher.signInTime;
   const hours = Math.floor(duration / (1000 * 60 * 60));

@@ -18,8 +18,17 @@ export interface ResearcherSessionDB {
   sessions_completed?: number // Number of sessions completed during this shift
 }
 
+// Type for the input session object
+interface ResearcherSessionInput {
+  researcherName: string
+  signInTime: number
+  signOutTime?: number
+  date: string
+  sessionsCompleted?: number
+}
+
   // Function to convert our local ResearcherSession to DB format
-export const convertToDBFormat = (session: any): ResearcherSessionDB => {
+export const convertToDBFormat = (session: ResearcherSessionInput): ResearcherSessionDB => {
   const duration = session.signOutTime 
     ? (session.signOutTime - session.signInTime) / (1000 * 60 * 60)
     : null

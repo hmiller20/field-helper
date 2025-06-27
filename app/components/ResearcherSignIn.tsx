@@ -139,7 +139,7 @@ export default function ResearcherSignIn() {
           className="text-sm bg-green-50 text-green-800 border border-green-300 hover:bg-green-100 shadow-sm transition-colors"
           disabled={isLoading}
         >
-          {isLoading ? "Signing out..." : `Sign Out`}
+          {isLoading ? "Signing out..." : `Researcher Sign Out`}
         </Button>
 
         {/* Sign-out confirmation dialog */}

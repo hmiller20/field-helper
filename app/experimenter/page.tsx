@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { updateSessionData, getSessionData } from "@/utils/sessionData";
+import { updateSessionData, getSessionData, incrementSessionCount } from "@/utils/sessionData";
 
 export default function ExperimenterPage() {
   const [experimenter, setExperimenter] = useState("");
@@ -36,6 +36,10 @@ export default function ExperimenterPage() {
       experimenter,
       sessionNotes,
     });
+    
+    // Increment the session count for the researcher
+    const newCount = incrementSessionCount();
+    console.log("=== EXPERIMENTER PAGE: Session count incremented to:", newCount);
     
     // Verify the data was saved
     const sessionData = getSessionData();

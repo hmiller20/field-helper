@@ -9,6 +9,7 @@ import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionDa
 import { Button } from "@/components/ui/button";
 import { ToastProvider, Toast, ToastDescription, ToastViewport } from "@/components/ui/toast";
 import PDFViewer from "@/components/PDFViewer";
+import ResearcherSignIn from "@/components/ResearcherSignIn";
 
 export default function ConsentPage() {
   const [hasReadInfo, setHasReadInfo] = useState(false)
@@ -90,7 +91,8 @@ export default function ConsentPage() {
   return (
     <ToastProvider>
       <div className="min-h-screen relative flex items-center justify-center p-4 bg-background">
-        <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex flex-col gap-2">
+          <ResearcherSignIn />
           <Button
             onClick={handleSync}
             variant="secondary"

@@ -1,5 +1,48 @@
 export type BlockType = 'control' | 'prestige' | 'dominance';
 
+// Researcher time tracking interfaces
+export interface ResearcherSession {
+  id: string;
+  researcherName: string;
+  signInTime: number;
+  signOutTime?: number;
+  date: string; // YYYY-MM-DD format
+  sessionsCompleted?: number; // Number of sessions completed during this shift
+  note?: string; // Optional note field for tracking status
+}
+
+// EST timezone utilities (inline to avoid import issues)
+const getESTTimestamp = (): number => {
+  const now = new Date();
+  const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  return estTime.getTime();
+};
+
+const getESTDate = (): string => {
+  const now = new Date();
+  const estDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  
+  const year = estDate.getFullYear();
+  const month = String(estDate.getMonth() + 1).padStart(2, '0');
+  const day = String(estDate.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
+
+const formatESTDateTime = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  return date.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+};
+
 export interface Block {
   blockType: BlockType;
   vignetteStartedAt: number;
@@ -426,4 +469,200 @@ export const debugSessionState = (): void => {
   console.log('Next block needed:', nextBlock);
   console.log('Session complete:', isComplete);
   console.log('=== END SESSION DEBUG ===');
+};
+
+// Researcher Time Tracking Functions
+const RESEARCHER_SESSIONS_KEY = "researcherSessions";
+const CURRENT_RESEARCHER_KEY = "currentResearcher";
+const SESSION_COUNT_KEY = "sessionCount";
+
+/**
+ * Get the current session count
+ */
+export const getSessionCount = (): number => {
+  if (typeof window === 'undefined') return 0;
+  const data = localStorage.getItem(SESSION_COUNT_KEY);
+  if (!data) return 0;
+  try {
+    const parsed = JSON.parse(data);
+    return parsed.count || 0;
+  } catch (error) {
+    console.error("Error parsing session count from localStorage:", error);
+    return 0;
+  }
+};
+
+/**
+ * Increment the session count
+ */
+export const incrementSessionCount = (): number => {
+  if (typeof window === 'undefined') return 0;
+  const currentCount = getSessionCount();
+  const newCount = currentCount + 1;
+  localStorage.setItem(SESSION_COUNT_KEY, JSON.stringify({ count: newCount }));
+  console.log(`Session count incremented to: ${newCount}`);
+  return newCount;
+};
+
+/**
+ * Reset the session count to 0
+ */
+export const resetSessionCount = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(SESSION_COUNT_KEY, JSON.stringify({ count: 0 }));
+  console.log("Session count reset to 0");
+};
+
+/**
+ * Get the current signed-in researcher session
+ */
+export const getCurrentResearcher = (): ResearcherSession | null => {
+  if (typeof window === 'undefined') return null;
+  const data = localStorage.getItem(CURRENT_RESEARCHER_KEY);
+  if (!data) return null;
+  try {
+    return JSON.parse(data) as ResearcherSession;
+  } catch (error) {
+    console.error("Error parsing current researcher from localStorage:", error);
+    return null;
+  }
+};
+
+/**
+ * Sign in a researcher
+ */
+export const signInResearcher = (researcherName: string): string => {
+  if (typeof window === 'undefined') return '';
+  
+  const now = getESTTimestamp(); // Use EST timestamp
+  const sessionId = `researcher_${now}`;
+  const today = getESTDate(); // Use EST date
+  
+  const researcherSession: ResearcherSession = {
+    id: sessionId,
+    researcherName,
+    signInTime: now,
+    date: today
+  };
+  
+  localStorage.setItem(CURRENT_RESEARCHER_KEY, JSON.stringify(researcherSession));
+  console.log(`Researcher ${researcherName} signed in at ${formatESTDateTime(now)} EST`);
+  
+  return sessionId;
+};
+
+/**
+ * Sign out the current researcher and sync to Supabase
+ */
+export const signOutResearcher = async (): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  
+  const currentResearcher = getCurrentResearcher();
+  if (!currentResearcher) {
+    console.log("No researcher currently signed in");
+    return;
+  }
+  
+  // Add sign out time in EST
+  const signOutTime = getESTTimestamp();
+  currentResearcher.signOutTime = signOutTime;
+  
+  // Add the current session count to the researcher session
+  const sessionsCompleted = getSessionCount();
+  (currentResearcher as any).sessionsCompleted = sessionsCompleted;
+  
+  const duration = signOutTime - currentResearcher.signInTime;
+  const hours = Math.floor(duration / (1000 * 60 * 60));
+  const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+  
+  // Save to local storage first (backup)
+  const allSessions = getResearcherSessions();
+  allSessions.push(currentResearcher);
+  localStorage.setItem(RESEARCHER_SESSIONS_KEY, JSON.stringify(allSessions));
+  
+  // Try to sync to Supabase
+  try {
+    const response = await fetch('/api/researcher', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(currentResearcher),
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('Researcher session synced to Supabase:', result.message);
+    } else {
+      console.error('Failed to sync to Supabase, but saved locally');
+    }
+  } catch (error) {
+    console.error('Error syncing to Supabase:', error);
+    console.log('Session saved locally as backup');
+  }
+  
+  // Clear current researcher and reset session count
+  localStorage.removeItem(CURRENT_RESEARCHER_KEY);
+  resetSessionCount();
+  
+  console.log(`Researcher ${currentResearcher.researcherName} signed out. Session duration: ${hours}h ${minutes}m, Sessions completed: ${sessionsCompleted}`);
+};
+
+/**
+ * Get all researcher sessions
+ */
+export const getResearcherSessions = (): ResearcherSession[] => {
+  if (typeof window === 'undefined') return [];
+  const data = localStorage.getItem(RESEARCHER_SESSIONS_KEY);
+  if (!data) return [];
+  try {
+    return JSON.parse(data) as ResearcherSession[];
+  } catch (error) {
+    console.error("Error parsing researcher sessions from localStorage:", error);
+    return [];
+  }
+};
+
+/**
+ * Export researcher time tracking data to JSON string for download
+ */
+export const exportResearcherData = (): string => {
+  const sessions = getResearcherSessions();
+  const currentResearcher = getCurrentResearcher();
+  
+  const allSessions = [...sessions];
+  if (currentResearcher) {
+    allSessions.push({
+      ...currentResearcher,
+      signOutTime: currentResearcher.signOutTime || Date.now(),
+      note: currentResearcher.signOutTime ? "" : "Currently signed in"
+    });
+  }
+  
+  // Convert to CSV-like format for easy Excel import
+  const csvData = allSessions.map(session => {
+    const duration = (session.signOutTime || Date.now()) - session.signInTime;
+    const hours = (duration / (1000 * 60 * 60)).toFixed(2);
+    
+    return {
+      researcherName: session.researcherName,
+      date: session.date,
+      signInTime: new Date(session.signInTime).toLocaleString(),
+      signOutTime: session.signOutTime ? new Date(session.signOutTime).toLocaleString() : "Still signed in",
+      durationHours: hours,
+      sessionId: session.id
+    };
+  });
+  
+  return JSON.stringify(csvData, null, 2);
+};
+
+/**
+ * Clear all researcher session data
+ */
+export const clearResearcherData = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(RESEARCHER_SESSIONS_KEY);
+  localStorage.removeItem(CURRENT_RESEARCHER_KEY);
+  console.log("All researcher session data cleared");
 }; 

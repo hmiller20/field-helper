@@ -15,11 +15,12 @@ import {
 
 // List of researchers - you can modify this list as needed
 const RESEARCHERS = [
-  "Alice Johnson",
-  "Bob Smith", 
-  "Carol Davis",
-  "David Wilson",
-  "Emma Brown"
+  "Alondra",
+  "Arthur", 
+  "Harrison",
+  "Ramsey",
+  "Sean",
+  "Shelby"
 ]
 
 const CORRECT_PASSWORD = "5678"

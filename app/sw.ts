@@ -10,6 +10,7 @@ const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
+  navigationPreload: true,
   runtimeCaching: [
     {
       matcher: ({url}) => url.pathname.match(/\.(pdf|mjs)$/i) !== null,
@@ -17,7 +18,7 @@ const serwist = new Serwist({
         cacheName: "pdf-cache",
         plugins: [
           new ExpirationPlugin({
-            maxAgeSeconds: 30 * 24 * 60 * 60,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
           })
         ]
       }),
@@ -37,3 +38,10 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+// Handle messages from the app
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

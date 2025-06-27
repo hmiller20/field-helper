@@ -3,10 +3,21 @@
 import { createClient } from '@supabase/supabase-js'
 
 // These will need to be set in your environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!supabaseUrl) {
+  console.warn('NEXT_PUBLIC_SUPABASE_URL is not set')
+}
+
+if (!supabaseAnonKey) {
+  console.warn('NEXT_PUBLIC_SUPABASE_ANON_KEY is not set')
+}
+
+// Only create client if both values are available
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null
 
 // Database types for type safety
 export interface ResearcherSessionDB {

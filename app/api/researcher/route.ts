@@ -3,6 +3,14 @@ import { supabase, convertToDBFormat } from '@/lib/supabase'
 
 // POST: Save researcher session to Supabase
 export async function POST(request: NextRequest) {
+  if (!supabase) {
+    console.error('Supabase client not available - check environment variables')
+    return NextResponse.json(
+      { success: false, error: 'Database not available' },
+      { status: 500 }
+    )
+  }
+
   try {
     const sessionData = await request.json()
     const dbData = convertToDBFormat(sessionData)
@@ -36,6 +44,14 @@ export async function POST(request: NextRequest) {
 
 // GET: Retrieve all researcher sessions from Supabase
 export async function GET(request: NextRequest) {
+  if (!supabase) {
+    console.error('Supabase client not available - check environment variables')
+    return NextResponse.json(
+      { success: false, error: 'Database not available' },
+      { status: 500 }
+    )
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const researcherName = searchParams.get('researcher')

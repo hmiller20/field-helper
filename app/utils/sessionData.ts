@@ -691,6 +691,11 @@ export function assignNameColors() {
 }
 
 export function getNameColor(name: "John" | "Bill"): string {
+  // SSR check - return default color during server-side rendering
+  if (typeof window === 'undefined') {
+    return "#000"; // Default black color for SSR
+  }
+  
   // First try to get from current session
   const session = getCurrentSession();
   if (session?.nameColors?.[name]) {
@@ -698,6 +703,27 @@ export function getNameColor(name: "John" | "Bill"): string {
   }
   
   // Fall back to localStorage for backward compatibility
-  const colors = JSON.parse(localStorage.getItem("nameColors") || "{}");
-  return NAME_COLORS[colors[name] as NameColor] || "#000";
+  try {
+    const colors = JSON.parse(localStorage.getItem("nameColors") || "{}");
+    return NAME_COLORS[colors[name] as NameColor] || "#000";
+  } catch (error) {
+    console.error("Error parsing name colors from localStorage:", error);
+    return "#000";
+  }
+}
+
+/**
+ * Safely color names in text with SSR support.
+ * Returns the original text during SSR and colored text in the browser.
+ */
+export function safeColorNamesInText(text: string): string {
+  // During SSR, return the original text without coloring
+  if (typeof window === 'undefined') {
+    return text;
+  }
+  
+  // In the browser, apply coloring
+  return text
+    .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
+    .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
 } 

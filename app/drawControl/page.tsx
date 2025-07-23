@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession, updateSession, setPresentedFirst, getNameColor } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, setPresentedFirst, safeColorNamesInText } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
@@ -20,12 +20,13 @@ import { capitalize } from "@/utils/capitalize";
 const MIN_AREA = 4600; // 4602 was the 5th percentile area in the last study (n=215)
 const MAX_AREA = 59670; // 59668 was the 95th percentile area in the last study (n=215)
 
+// Remove the local colorNamesInText function and use the imported one
 // helper function to color names in text
-function colorNamesInText(text: string) {
-  return text
-    .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
-    .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
-}
+// function colorNamesInText(text: string) {
+//   return text
+//     .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
+//     .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
+// }
 
 const DrawingPage: React.FC = () => {
   // New ref that stores completed shapes (each as an array of points)
@@ -254,7 +255,7 @@ const DrawingPage: React.FC = () => {
   // Function to get the modal text with conditional "redraw" styling for second block
   const getModalText = (): string => {
     // Control is always block 1, so it will always say "draw" not "redraw"
-    return colorNamesInText(`Now, in between the house and the tree, please draw the outline of John, the person you just read about.`);
+    return safeColorNamesInText(`Now, in between the house and the tree, please draw the outline of John, the person you just read about.`);
   };
 
   return (

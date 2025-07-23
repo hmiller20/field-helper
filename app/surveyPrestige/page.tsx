@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { updateSession, getCurrentSession, getNameColor } from "@/utils/sessionData"
+import { updateSession, getCurrentSession, safeColorNamesInText } from "@/utils/sessionData"
 
 // Types for our survey questions
 type QuestionType = "likert";
@@ -65,12 +65,13 @@ const baseQuestions: Question[] = [
   },
 ]
 
+// Remove the local colorNamesInText function and use the imported one
 // helper function to color names in text
-function colorNamesInText(text: string) {
-  return text
-    .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
-    .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
-}
+// function colorNamesInText(text: string) {
+//   return text
+//     .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
+//     .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
+// }
 
 export default function SurveyPrestigePage() {
   const [responses, setResponses] = useState<Record<string, string | number>>({})
@@ -114,7 +115,7 @@ export default function SurveyPrestigePage() {
               <div key={question.id} className="space-y-2">
                 <Label 
                   className="text-lg"
-                  dangerouslySetInnerHTML={{ __html: colorNamesInText(question.text) }}
+                  dangerouslySetInnerHTML={{ __html: safeColorNamesInText(question.text) }}
                 />
                 <RadioGroup
                   onValueChange={(value) => handleResponse(question.id, parseInt(value))}

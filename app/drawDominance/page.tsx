@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, getNameColor } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, safeColorNamesInText } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
@@ -19,12 +19,13 @@ import { capitalize } from "@/utils/capitalize";
 const MIN_AREA = 4600; // 4602 was the 5th percentile area in the last study (n=215)
 const MAX_AREA = 59670; // 59668 was the 95th percentile area in the last study (n=215)
 
+// Remove the local colorNamesInText function and use the imported one
 // helper function to color names in text
-function colorNamesInText(text: string) {
-  return text
-    .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
-    .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
-}
+// function colorNamesInText(text: string) {
+//   return text
+//     .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
+//     .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
+// }
 
 const DrawDominancePage: React.FC = () => {
   const shapesRef = useRef<{ x: number; y: number }[][]>([]);
@@ -50,33 +51,19 @@ const DrawDominancePage: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Function to determine person's name based on block position
-  const getPersonName = (): string => {
-    const session = getCurrentSession();
-    if (!session) return "John"; // default
-    
-    const completedBlocksCount = session.blocks?.length || 0;
-    const currentBlockPosition = completedBlocksCount + 1;
-    
-    // Control is block 1 (John), second block is John, third block is Bill
-    return currentBlockPosition === 3 ? "Bill" : "John";
-  };
-
   // Function to get the modal text with conditional "redraw" styling for second block
   const getModalText = (): string => {
     const session = getCurrentSession();
-    if (!session) return colorNamesInText(`Now, in between the house and the tree, please draw the outline of John, the person you just read about.`);
+    if (!session) return "";
     
+    // Check if this is the second block (prestige/dominance)
     const completedBlocksCount = session.blocks?.length || 0;
-    const currentBlockPosition = completedBlocksCount + 1;
-    const personName = getPersonName();
+    const isSecondBlock = completedBlocksCount === 1; // After control block
     
-    if (currentBlockPosition === 2) {
-      return colorNamesInText(`Now, in between the house and the tree, please <strong><u>REDRAW</u></strong> the outline of <strong>${personName},</strong> the person you just read about.`);
-    } else if (currentBlockPosition === 3) {
-      return colorNamesInText(`Now, in between the house and the tree, please draw the outline of <strong>${personName}, the NEW person</strong> you just read about.`);
+    if (isSecondBlock) {
+      return safeColorNamesInText(`Now, please redraw the outline of John, the person you just read about.`);
     } else {
-      return colorNamesInText(`Now, in between the house and the tree, please draw the outline of ${personName}, the person you just read about.`);
+      return safeColorNamesInText(`Now, in between the house and the tree, please draw the outline of John, the person you just read about.`);
     }
   };
 

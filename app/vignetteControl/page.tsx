@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { getNameColor } from "@/utils/sessionData"
+import { safeColorNamesInText } from "@/utils/sessionData"
 
 
 const Vignettes = [
@@ -14,18 +14,18 @@ const Vignettes = [
   }
 ]
 
+// Remove the local colorNamesInText function and use the imported one
 // helper function to color names in text
-
-function colorNamesInText(text: string) {
-  // Replace <strong>John</strong> first, then plain John
-  const johnColor = getNameColor("John");
-  const billColor = getNameColor("Bill");
-  return text
-    .replace(/<strong>John<\/strong>/g, `<strong><span style="color: ${johnColor};">John</span></strong>`)
-    .replace(/John/g, `<span style="color: ${johnColor}; font-weight: bold;">John</span>`)
-    .replace(/<strong>Bill<\/strong>/g, `<strong><span style="color: ${billColor};">Bill</span></strong>`)
-    .replace(/Bill/g, `<span style="color: ${billColor}; font-weight: bold;">Bill</span>`);
-}
+// function colorNamesInText(text: string) {
+//   // Replace <strong>John</strong> first, then plain John
+//   const johnColor = getNameColor("John");
+//   const billColor = getNameColor("Bill");
+//   return text
+//     .replace(/<strong>John<\/strong>/g, `<strong><span style="color: ${johnColor};">John</span></strong>`)
+//     .replace(/John/g, `<span style="color: ${johnColor}; font-weight: bold;">John</span>`)
+//     .replace(/<strong>Bill<\/strong>/g, `<strong><span style="color: ${billColor};">Bill</span></strong>`)
+//     .replace(/Bill/g, `<span style="color: ${billColor}; font-weight: bold;">Bill</span>`);
+// }
 
 export default function VignettePage() {
   const router = useRouter()
@@ -56,7 +56,7 @@ export default function VignettePage() {
         <CardContent className="p-6 flex flex-col items-center gap-8">
           <div
             className="text-left text-lg sm:text-xl leading-relaxed max-w-xl"
-            dangerouslySetInnerHTML={{ __html: colorNamesInText(vignette.text) }}
+            dangerouslySetInnerHTML={{ __html: safeColorNamesInText(vignette.text) }}
           />
 
           <Button

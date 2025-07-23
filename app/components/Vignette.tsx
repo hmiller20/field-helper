@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BlockType, getCurrentSession, updateSession, getNameColor } from "@/utils/sessionData";
+import { BlockType, getCurrentSession, updateSession, safeColorNamesInText } from "@/utils/sessionData";
 import { capitalize } from "@/utils/capitalize";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,12 +23,13 @@ const VIGNETTES_SECOND_BLOCK: Record<BlockType, string> = {
     "A company is hiring a new CEO, and <strong>John</strong> is being considered for the position. John has several years of workplace experience and has gained a considerable degree of influence over others. John has <strong>aggressively moved through the ranks</strong> into a position of leadership. He is a <strong>dominant leader</strong> who prioritizes having control and authority over the people who report to him. When John makes a decision, that decision is <strong>final</strong>, even when others disagree. John has his own views of how tasks should be accomplished, and he uses reward and punishment to get people to follow his ideas. Although his subordinates sometimes have good ideas, those subordinates know it is better to let John have his way rather than contradict his ideas. Many subordinates <strong>fear John</strong>, and for that reason they follow his orders. In sum, John adopts a dominant leadership style focused on making <strong>definitive decisions</strong>.",
 };
 
+// Remove the local colorNamesInText function and use the imported one
 // helper function to color names in text
-function colorNamesInText(text: string) {
-  return text
-    .replace(/John/g, `<span style=\"color: ${getNameColor("John")}; font-weight: bold;\">John</span>`)
-    .replace(/Bill/g, `<span style=\"color: ${getNameColor("Bill")}; font-weight: bold;\">Bill</span>`);
-}
+// function colorNamesInText(text: string) {
+//   return text
+//     .replace(/John/g, `<span style=\"color: ${getNameColor("John")}; font-weight: bold;\">John</span>`)
+//     .replace(/Bill/g, `<span style=\"color: ${getNameColor("Bill")}; font-weight: bold;\">Bill</span>`);
+// }
 
 const Vignette = ({ blockType }: { blockType: BlockType }) => {
   const router = useRouter();
@@ -103,7 +104,7 @@ const Vignette = ({ blockType }: { blockType: BlockType }) => {
         <CardContent className="p-6 flex flex-col items-center gap-8">
           <div 
             className="text-left text-lg sm:text-xl leading-relaxed max-w-xl"
-            dangerouslySetInnerHTML={{ __html: colorNamesInText(getVignetteText()) }}
+            dangerouslySetInnerHTML={{ __html: safeColorNamesInText(getVignetteText()) }}
           />
 
           <Button

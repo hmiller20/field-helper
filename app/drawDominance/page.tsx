@@ -11,13 +11,20 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession, updateSession, getNextBlockType, debugSessionState } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, getNameColor } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
 // Drawing area validation constants
 const MIN_AREA = 4600; // 4602 was the 5th percentile area in the last study (n=215)
 const MAX_AREA = 59670; // 59668 was the 95th percentile area in the last study (n=215)
+
+// helper function to color names in text
+function colorNamesInText(text: string) {
+  return text
+    .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
+    .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
+}
 
 const DrawDominancePage: React.FC = () => {
   const shapesRef = useRef<{ x: number; y: number }[][]>([]);
@@ -58,18 +65,18 @@ const DrawDominancePage: React.FC = () => {
   // Function to get the modal text with conditional "redraw" styling for second block
   const getModalText = (): string => {
     const session = getCurrentSession();
-    if (!session) return `Now, in between the house and the tree, please draw the outline of John, the person you just read about.`;
+    if (!session) return colorNamesInText(`Now, in between the house and the tree, please draw the outline of John, the person you just read about.`);
     
     const completedBlocksCount = session.blocks?.length || 0;
     const currentBlockPosition = completedBlocksCount + 1;
     const personName = getPersonName();
     
     if (currentBlockPosition === 2) {
-      return `Now, in between the house and the tree, please <strong><u>REDRAW</u></strong> the outline of <strong>${personName},</strong> the person you just read about.`;
+      return colorNamesInText(`Now, in between the house and the tree, please <strong><u>REDRAW</u></strong> the outline of <strong>${personName},</strong> the person you just read about.`);
     } else if (currentBlockPosition === 3) {
-      return `Now, in between the house and the tree, please draw the outline of <strong>${personName}, the NEW person</strong> you just read about.`;
+      return colorNamesInText(`Now, in between the house and the tree, please draw the outline of <strong>${personName}, the NEW person</strong> you just read about.`);
     } else {
-      return `Now, in between the house and the tree, please draw the outline of ${personName}, the person you just read about.`;
+      return colorNamesInText(`Now, in between the house and the tree, please draw the outline of ${personName}, the person you just read about.`);
     }
   };
 

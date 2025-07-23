@@ -1,3 +1,5 @@
+import { NameColor, NAME_COLORS } from "./colors";
+
 export type BlockType = 'control' | 'prestige' | 'dominance';
 
 // Researcher time tracking interfaces
@@ -87,6 +89,9 @@ export interface Session {
   // Temporary fields used during the session
   tempVignetteStart?: number;
   tempSurvey?: Record<string, string | number>;
+
+  // Name color
+  nameColors: { John: NameColor, Bill: NameColor };
 }
 
 const STORAGE_KEY = "session";
@@ -666,3 +671,33 @@ export const clearResearcherData = (): void => {
   localStorage.removeItem(CURRENT_RESEARCHER_KEY);
   console.log("All researcher session data cleared");
 }; 
+
+export function assignNameColors() {
+  // Clear any existing name colors to ensure fresh randomization
+  localStorage.removeItem("nameColors");
+  
+  // 50/50 random assignment
+  const johnColor: NameColor = Math.random() < 0.5 ? "blue" : "orange";
+  const billColor: NameColor = johnColor === "blue" ? "orange" : "blue";
+  
+  // Store in localStorage for backward compatibility
+  localStorage.setItem("nameColors", JSON.stringify({ John: johnColor, Bill: billColor }));
+  
+  // Also store in current session if it exists
+  const session = getCurrentSession();
+  if (session) {
+    updateSession({ nameColors: { John: johnColor, Bill: billColor } });
+  }
+}
+
+export function getNameColor(name: "John" | "Bill"): string {
+  // First try to get from current session
+  const session = getCurrentSession();
+  if (session?.nameColors?.[name]) {
+    return NAME_COLORS[session.nameColors[name]];
+  }
+  
+  // Fall back to localStorage for backward compatibility
+  const colors = JSON.parse(localStorage.getItem("nameColors") || "{}");
+  return NAME_COLORS[colors[name] as NameColor] || "#000";
+} 

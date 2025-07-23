@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BlockType, getCurrentSession } from "@/utils/sessionData";
+import { BlockType, getCurrentSession, getNameColor } from "@/utils/sessionData";
 import { capitalize } from "@/utils/capitalize";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,13 @@ const PREP_TEXT_SECOND_BLOCK = {
   prestige: "We are now going to <strong>share more information about John.</strong> Please read the following description carefully.",
   dominance: "We are now going to <strong>share more information about John.</strong> Please read the following description carefully."
 };
+
+// helper function to color names in text
+function colorNamesInText(text: string) {
+  return text
+    .replace(/John/g, `<span style=\"color: ${getNameColor("John")}; font-weight: bold;\">John</span>`)
+    .replace(/Bill/g, `<span style=\"color: ${getNameColor("Bill")}; font-weight: bold;\">Bill</span>`);
+}
 
 const Prep = ({ blockType }: { blockType: BlockType }) => {
     const router = useRouter();
@@ -76,7 +83,7 @@ const Prep = ({ blockType }: { blockType: BlockType }) => {
                 <CardContent className="p-6 flex flex-col items-center gap-8">
                     <div 
                         className="text-left text-lg sm:text-xl leading-relaxed max-w-xl"
-                        dangerouslySetInnerHTML={{ __html: getPrepText() }}
+                        dangerouslySetInnerHTML={{ __html: colorNamesInText(getPrepText()) }}
                     />
 
                     <Button

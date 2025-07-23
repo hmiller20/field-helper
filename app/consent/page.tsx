@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { v1 as uuidv1 } from "uuid"
-import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionData } from "@/utils/sessionData";
+import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionData, assignNameColors } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
 import { ToastProvider, Toast, ToastDescription, ToastViewport } from "@/components/ui/toast";
 import PDFViewer from "@/components/PDFViewer";
@@ -137,6 +137,9 @@ export default function ConsentPage() {
               onClick={() => {
                 const sessionId = uuidv1();
                 console.log("=== CONSENT: Generated session ID ===", sessionId);
+                
+                // Assign name colors for this session
+                assignNameColors();
                 
                 updateSessionData({ id: sessionId });
                 

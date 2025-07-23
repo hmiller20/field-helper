@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { getNameColor } from "@/utils/sessionData"
 
 
 const Vignettes = [
@@ -12,6 +13,19 @@ const Vignettes = [
     text: "John is a 35-year-old man who lives in a mid-sized city. He has brown hair. He has been working in various professional roles for about ten years since graduation. John typically wakes up early each morning, has coffee and breakfast, then commutes to his office downtown.",
   }
 ]
+
+// helper function to color names in text
+
+function colorNamesInText(text: string) {
+  // Replace <strong>John</strong> first, then plain John
+  const johnColor = getNameColor("John");
+  const billColor = getNameColor("Bill");
+  return text
+    .replace(/<strong>John<\/strong>/g, `<strong><span style="color: ${johnColor};">John</span></strong>`)
+    .replace(/John/g, `<span style="color: ${johnColor}; font-weight: bold;">John</span>`)
+    .replace(/<strong>Bill<\/strong>/g, `<strong><span style="color: ${billColor};">Bill</span></strong>`)
+    .replace(/Bill/g, `<span style="color: ${billColor}; font-weight: bold;">Bill</span>`);
+}
 
 export default function VignettePage() {
   const router = useRouter()
@@ -40,9 +54,10 @@ export default function VignettePage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-2xl">
         <CardContent className="p-6 flex flex-col items-center gap-8">
-          <div className="text-left text-lg sm:text-xl leading-relaxed max-w-xl">
-            {vignette.text}
-          </div>
+          <div
+            className="text-left text-lg sm:text-xl leading-relaxed max-w-xl"
+            dangerouslySetInnerHTML={{ __html: colorNamesInText(vignette.text) }}
+          />
 
           <Button
             className={`w-48 h-16 text-xl bg-[#c1e6c1] text-black mt-4 ${

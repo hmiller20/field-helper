@@ -15,9 +15,16 @@ export default function Demographics() {
     age: '',
     gender: ''
   });
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    // Validation: require both age and gender
+    if (!formData.age || !formData.gender) {
+      setError('Please answer both questions before continuing.');
+      return;
+    }
     console.log('Demographics submitted:', formData);
     
     const session = getCurrentSession();
@@ -109,6 +116,10 @@ export default function Demographics() {
                   </div>
                 </RadioGroup>
               </div>
+
+              {error && (
+                <div className="text-red-600 text-center text-sm font-medium">{error}</div>
+              )}
 
               <div className="flex justify-center pt-4">
                 <Button type="submit" className="w-full max-w-md">

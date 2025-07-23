@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { updateSession, getCurrentSession } from "@/utils/sessionData"
+import { updateSession, getCurrentSession, getNameColor } from "@/utils/sessionData"
 
 // Types for our survey questions
 type QuestionType = "likert";
@@ -65,6 +65,13 @@ const baseQuestions: Question[] = [
   },
 ]
 
+// helper function to color names in text
+function colorNamesInText(text: string) {
+  return text
+    .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
+    .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
+}
+
 export default function SurveyDominancePage() {
   const [responses, setResponses] = useState<Record<string, string | number>>({})
   const router = useRouter()
@@ -105,7 +112,10 @@ export default function SurveyDominancePage() {
             
             {questions.map((question) => (
               <div key={question.id} className="space-y-2">
-                <Label className="text-lg">{question.text}</Label>
+                <Label 
+                  className="text-lg"
+                  dangerouslySetInnerHTML={{ __html: colorNamesInText(question.text) }}
+                />
                 <RadioGroup
                   onValueChange={(value) => handleResponse(question.id, parseInt(value))}
                   value={responses[question.id]?.toString() || ""}

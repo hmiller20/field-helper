@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import { Serwist } from "serwist";
-import { NetworkFirst, ExpirationPlugin } from "serwist";
+import { NetworkFirst } from "serwist";
 
 declare const self: ServiceWorkerGlobalScope & {
   __SW_MANIFEST: Array<string | { url: string; revision: string | null }>;
@@ -12,17 +12,22 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   runtimeCaching: [
+    // Cache Next.js navigation requests specifically
+    {
+      matcher: ({ url, request }) => {
+        return request.destination === 'document' || 
+               url.pathname.startsWith('/_next/') ||
+               url.pathname.match(/\/(consent|demographics|exampleDrawing|prepControl|prepPrestige|prepDominance|vignetteControl|vignettePrestige|vignetteDominance|drawControl|drawPrestige|drawDominance|surveyControl|surveyPrestige|surveyDominance|debriefing|experimenter)$/);
+      },
+      handler: new NetworkFirst({
+        cacheName: "navigation-cache"
+      }),
+    },
+    // Catch-all for everything else
     {
       matcher: ({ url }) => url.protocol.startsWith('http'),
       handler: new NetworkFirst({
         cacheName: "offlineCache",
-        plugins: [
-          new ExpirationPlugin({
-            maxEntries: 500, // Increase cache size
-            maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
-            purgeOnQuotaError: true, // Clean up if quota exceeded
-          }),
-        ],
       }),
     },
   ],

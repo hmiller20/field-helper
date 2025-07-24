@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, safeColorNamesInText } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, safeColorNamesInText, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
@@ -56,14 +56,19 @@ const DrawDominancePage: React.FC = () => {
     const session = getCurrentSession();
     if (!session) return "";
     
-    // Check if this is the second block (prestige/dominance)
+    // Check current block position
     const completedBlocksCount = session.blocks?.length || 0;
-    const isSecondBlock = completedBlocksCount === 1; // After control block
+    const currentBlockPosition = completedBlocksCount + 1; // +1 because we're about to start this block
+    const isSecondBlock = currentBlockPosition === 2; // After control block
+    const isThirdBlock = currentBlockPosition === 3; // After control and one prestige/dominance block
+    
+    // Determine which character name to use
+    const characterName = isThirdBlock ? "Bill" : "John";
     
     if (isSecondBlock) {
-      return safeColorNamesInText(`Now, please redraw the outline of John, the person you just read about.`);
+      return safeColorNamesInText(`Now, please redraw the outline of ${characterName}, the person you just read about.`);
     } else {
-      return safeColorNamesInText(`Now, in between the house and the tree, please draw the outline of John, the person you just read about.`);
+      return safeColorNamesInText(`Now, in between the house and the tree, please draw the outline of ${characterName}, the person you just read about.`);
     }
   };
 
@@ -195,12 +200,14 @@ const DrawDominancePage: React.FC = () => {
 
     // Area validation - check if drawing is too small or too large
     if (totalArea < MIN_AREA) {
+      incrementSmallViolation(); // Track small drawing violation
       setAreaWarningMessage("Your drawing looks really small. Please clear the canvas and try drawing a more realistic size.");
       setShowAreaWarning(true);
       return;
     }
     
     if (totalArea > MAX_AREA) {
+      incrementLargeViolation(); // Track large drawing violation
       setAreaWarningMessage("Your drawing looks really big. Please clear the canvas and try drawing a more realistic size.");
       setShowAreaWarning(true);
       return;

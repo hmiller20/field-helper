@@ -92,6 +92,10 @@ export interface Session {
 
   // Name color
   nameColors: { John: NameColor, Bill: NameColor };
+  
+  // Drawing violation tracking
+  smallViolations?: number;
+  largeViolations?: number;
 }
 
 const STORAGE_KEY = "session";
@@ -240,10 +244,12 @@ export const updateSessionData = (newData: Partial<Session>) => {
       const updatedSession = { ...currentSession, ...newData };
       setSession(updatedSession);
     } else {
-      // Create new session with the provided data
+      // Create new session with the provided data and ensure violation counts are initialized
       const newSession = {
         id: newData.id,
         blocks: [],
+        smallViolations: 0,
+        largeViolations: 0,
         ...newData
       } as Session;
       setSession(newSession);
@@ -690,6 +696,47 @@ export function assignNameColors() {
   }
 }
 
+/**
+ * Initialize or reset drawing violation counts for a new session
+ */
+export function initializeViolationCounts() {
+  const session = getCurrentSession();
+  if (session) {
+    // Explicitly set violation counts to 0 as integers
+    const updatedSession = {
+      ...session,
+      smallViolations: 0,
+      largeViolations: 0
+    };
+    setSession(updatedSession);
+    console.log("Violation counts initialized: smallViolations=0, largeViolations=0");
+  }
+}
+
+/**
+ * Increment the small drawing violation count
+ */
+export function incrementSmallViolation() {
+  const session = getCurrentSession();
+  if (session) {
+    const currentCount = session.smallViolations || 0;
+    updateSession({ smallViolations: currentCount + 1 });
+    console.log(`Small drawing violation recorded. Total count: ${currentCount + 1}`);
+  }
+}
+
+/**
+ * Increment the large drawing violation count
+ */
+export function incrementLargeViolation() {
+  const session = getCurrentSession();
+  if (session) {
+    const currentCount = session.largeViolations || 0;
+    updateSession({ largeViolations: currentCount + 1 });
+    console.log(`Large drawing violation recorded. Total count: ${currentCount + 1}`);
+  }
+}
+
 export function getNameColor(name: "John" | "Bill"): string {
   // SSR check - return default color during server-side rendering
   if (typeof window === 'undefined') {
@@ -711,6 +758,102 @@ export function getNameColor(name: "John" | "Bill"): string {
     return "#000";
   }
 }
+
+export function flattenSessionForSupabase(session: Session): Record<string, string | number | null> {
+  // Map blockType to block index for easy lookup
+  // Control is always first, but dominance/prestige can be 2nd or 3rd
+  // We'll assign block1, block2, block3 based on the order in the blocks array
+  
+  // Ensure violation fields are always integers
+  const smallViolations = typeof session.smallViolations === 'number' ? session.smallViolations : 0;
+  const largeViolations = typeof session.largeViolations === 'number' ? session.largeViolations : 0;
+  
+  console.log(`Session ${session.id}: smallViolations=${smallViolations}, largeViolations=${largeViolations}`);
+  
+  const flat: Record<string, string | number | null> = {
+    presented_first: session.presentedFirst,
+    experimenter: session.experimenter || null,
+    session_notes: session.sessionNotes || null,
+    demographics_age: session.demographics?.age ? parseInt(session.demographics.age, 10) : null,
+    demographics_gender: session.demographics?.gender || null,
+    name_color_john: session.nameColors?.John || null,
+    name_color_bill: session.nameColors?.Bill || null,
+    small_violations: smallViolations,
+    large_violations: largeViolations,
+    synced_at: session.syncedAt || null,
+    sync_time: session.syncTime || null,
+    // id, created_at are handled by Supabase/Postgres
+  };
+
+  // List of survey items for each block (update as needed)
+  const surveyItems = [
+    "dommanip1", "dommanip2", "attncheck3", "premanip1", "premanip2", "statusmanip1", "statusmanip2",
+    "attncheck5", "attncheck2"
+  ];
+
+  // For each block, assign to block1, block2, block3 based on order in session.blocks
+  session.blocks.forEach((block: Block, i: number) => {
+    const idx = i + 1; // 1-based for block1, block2, block3
+    flat[`block${idx}_type`] = block.blockType;
+    flat[`block${idx}_area`] = block.drawing?.area ?? null;
+    flat[`block${idx}_max_width`] = block.drawing?.maxWidth ?? null;
+    flat[`block${idx}_max_height`] = block.drawing?.maxHeight ?? null;
+    flat[`block${idx}_verticality`] = block.drawing?.verticality ?? null;
+    flat[`block${idx}_png_url`] = block.drawing?.pngUrl ?? null;
+
+    // For each possible survey item, flatten if present
+    surveyItems.forEach((item: string) => {
+      // The survey keys in your data are like domManip1_c, domManip1_d, domManip1_p, etc.
+      // We'll match any key that starts with the item (case-insensitive)
+      const surveyKey = Object.keys(block.survey).find(
+        k => k.toLowerCase().startsWith(item)
+      );
+      flat[`block${idx}_survey_${item}`] = surveyKey ? block.survey[surveyKey] : null;
+    });
+  });
+
+  return flat;
+}
+
+/**
+ * Sync sessions to Supabase using the new API route
+ */
+export const syncSessionsToSupabase = async (sessions?: Session[]): Promise<{ success: boolean; message?: string; errors?: unknown[] }> => {
+  try {
+    // Use provided sessions or get all sessions from localStorage
+    const sessionsToSync = sessions || getSessionData();
+    
+    if (sessionsToSync.length === 0) {
+      return { success: true, message: 'No sessions to sync' };
+    }
+
+    console.log(`Syncing ${sessionsToSync.length} session(s) to Supabase...`);
+
+    const response = await fetch('/api/sync-supabase', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(sessionsToSync),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      console.log('Supabase sync successful:', result.message);
+      return { success: true, message: result.message };
+    } else {
+      console.error('Supabase sync failed:', result.error);
+      return { success: false, message: result.error, errors: result.errors };
+    }
+  } catch (error) {
+    console.error('Error syncing to Supabase:', error);
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Unknown error occurred' 
+    };
+  }
+};
 
 /**
  * Safely color names in text with SSR support.

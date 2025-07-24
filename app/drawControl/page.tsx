@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession, updateSession, setPresentedFirst, safeColorNamesInText } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, setPresentedFirst, safeColorNamesInText, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
@@ -188,12 +188,14 @@ const DrawingPage: React.FC = () => {
 
     // ▸ Area validation - check if drawing is too small or too large
     if (totalArea < MIN_AREA) {
+      incrementSmallViolation(); // Track small drawing violation
       setAreaWarningMessage("Your drawing looks really small. Please clear the canvas and try drawing a more realistic size.");
       setShowAreaWarning(true);
       return;
     }
     
     if (totalArea > MAX_AREA) {
+      incrementLargeViolation(); // Track large drawing violation
       setAreaWarningMessage("Your drawing looks really big. Please clear the canvas and try drawing a more realistic size.");
       setShowAreaWarning(true);
       return;

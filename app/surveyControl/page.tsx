@@ -115,10 +115,9 @@ export default function SurveyControlPage() {
                     <div className="flex justify-between">
                       {[1, 2, 3, 4, 5, 6, 7].map((value) => (
                         <div key={value} className="flex flex-col items-center gap-1">
-                          <Label htmlFor={`${question.id}-${value}`} className="text-sm">
+                          <RadioGroupItem value={value.toString()} id={`${question.id}-${value}`}>
                             {value}
-                          </Label>
-                          <RadioGroupItem value={value.toString()} id={`${question.id}-${value}`} />
+                          </RadioGroupItem>
                         </div>
                       ))}
                     </div>

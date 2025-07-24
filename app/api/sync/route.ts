@@ -176,7 +176,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ 
           success: true, 
           message: "All sessions already exist in database",
-          skipped: existingSessions.length
+          skipped: existingSessions.length,
+          updatedSessions: sessionsWithSyncTime // Still return updated sessions even if not inserted
         });
       }
       
@@ -185,13 +186,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ 
         success: true, 
         insertedIds: result.insertedIds,
-        skipped: existingSessions.length
+        skipped: existingSessions.length,
+        updatedSessions: newSessions // Return the updated sessions with S3 URLs
       });
     }
 
     // If no existing sessions found, insert all sessions
     const result = await collection.insertMany(sessionsWithSyncTime);
-    return NextResponse.json({ success: true, insertedIds: result.insertedIds });
+    return NextResponse.json({ 
+      success: true, 
+      insertedIds: result.insertedIds,
+      updatedSessions: sessionsWithSyncTime // Return the updated sessions with S3 URLs
+    });
   } catch (error) {
     console.error("Error syncing session data:", error);
     let errorMessage = "Failed to sync session data";

@@ -311,78 +311,81 @@ const DrawingPage: React.FC = () => {
         </DrawDialogContent>
       </Dialog>
 
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-        {/* Container for html2canvas screenshot */}
-        <div ref={containerRef} className="relative w-full h-[80vh] border border-gray-300 overflow-hidden">
-          <canvas
-            ref={canvasRef}
-            className="w-full h-full bg-sky-100"
-            style={{ touchAction: "none" }}
-            onPointerDown={startDrawing}
-            onPointerMove={draw}
-            onPointerUp={stopDrawing}
-            onPointerCancel={stopDrawing}
-          />
-          {/* Scale object: simple tree */}
-          <div
-            className="absolute bottom-0 right-[0vw]"
-            style={{ 
-              pointerEvents: "none", 
-              width: "20vw", 
-              height: "100%" 
-            }}
-          >
-            <svg
-              className="w-full h-full"
-              viewBox="-200 -100 500 500"
-              preserveAspectRatio="xMidYMid meet"
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        {/* Container for html2canvas screenshot - takes remaining space after buttons */}
+        <div className="flex-1 flex flex-col p-4 min-h-0">
+          <div ref={containerRef} className="flex-1 relative border border-gray-300 overflow-hidden min-h-0">
+            <canvas
+              ref={canvasRef}
+              className="w-full h-full bg-sky-100"
+              style={{ touchAction: "none" }}
+              onPointerDown={startDrawing}
+              onPointerMove={draw}
+              onPointerUp={stopDrawing}
+              onPointerCancel={stopDrawing}
+            />
+            {/* Scale object: simple tree */}
+            <div
+              className="absolute bottom-0 right-[0vw]"
+              style={{ 
+                pointerEvents: "none", 
+                width: "20vw", 
+                height: "100%" 
+              }}
             >
-              {/* Tree trunk */}
-              <rect x="35" y="340" width="65" height="470" fill="saddlebrown" />
-              {/* Tree branches */}
-              <rect x="240" y="-30" width="100" height="15" fill="saddlebrown" transform="rotate(225 260 270)" />
-              <rect x="460" y="115" width="100" height="15" fill="saddlebrown" transform="rotate(155 260 270)" />
-              {/* Tree canopy */}
-              <circle cx="68" cy="195" r="200" fill="green" stroke="green" strokeWidth="2" />
-            </svg>
-          </div>
-          {/* Simple house for scale */}
-          <div
-            className="absolute bottom-0 left-0"
-            style={{ 
-              pointerEvents: "none", 
-              width: "40vw", 
-              height: "100%" 
-            }}
-          >
-            <svg
-              className="w-full h-full"
-              viewBox="-200 -100 500 500"
-              preserveAspectRatio="xMinYMid meet"
+              <svg
+                className="w-full h-full"
+                viewBox="-200 -100 500 500"
+                preserveAspectRatio="xMidYMid meet"
+              >
+                {/* Tree trunk */}
+                <rect x="35" y="340" width="65" height="470" fill="saddlebrown" />
+                {/* Tree branches */}
+                <rect x="240" y="-30" width="100" height="15" fill="saddlebrown" transform="rotate(225 260 270)" />
+                <rect x="460" y="115" width="100" height="15" fill="saddlebrown" transform="rotate(155 260 270)" />
+                {/* Tree canopy */}
+                <circle cx="68" cy="195" r="200" fill="green" stroke="green" strokeWidth="2" />
+              </svg>
+            </div>
+            {/* Simple house for scale */}
+            <div
+              className="absolute bottom-0 left-0"
+              style={{ 
+                pointerEvents: "none", 
+                width: "40vw", 
+                height: "100%" 
+              }}
             >
-              {/* House body: tan square */}
-              <rect x="-200" y="100" width="470" height="375" fill="#D2B48C" />
-              {/* Chimney */}
-              <rect x="165" y="-30" width="50" height="100" fill="#8B4513" />
-              {/* Roof */}
-              <polygon points="-200,100 35,-100, 270,100" fill="red" />
-              {/* Garage door */}
-              <rect x="-115" y="230" width="300" height="865" fill="gray" />
-            </svg>
+              <svg
+                className="w-full h-full"
+                viewBox="-200 -100 500 500"
+                preserveAspectRatio="xMinYMid meet"
+              >
+                {/* House body: tan square */}
+                <rect x="-200" y="100" width="470" height="375" fill="#D2B48C" />
+                {/* Chimney */}
+                <rect x="165" y="-30" width="50" height="100" fill="#8B4513" />
+                {/* Roof */}
+                <polygon points="-200,100 35,-100, 270,100" fill="red" />
+                {/* Garage door */}
+                <rect x="-115" y="230" width="300" height="865" fill="gray" />
+              </svg>
+            </div>
+            {/* Ground line: green horizontal line */}
+            <div className="absolute bottom-0 left-0 w-full h-3 bg-green-500 pointer-events-none" />
           </div>
-          {/* Ground line: green horizontal line */}
-          <div className="absolute bottom-0 left-0 w-full h-3 bg-green-500 pointer-events-none" />
         </div>
         
-        <div className="mt-4 flex space-x-4">
+        {/* Buttons fixed at bottom */}
+        <div className="flex-shrink-0 p-4 flex justify-center space-x-4">
           <button
-            className="px-4 py-2 bg-red-500 text-white rounded"
+            className="px-6 py-3 bg-red-500 text-white rounded font-medium text-lg"
             onClick={clearCanvas}
           >
             Clear Canvas
           </button>
           <button
-            className="px-4 py-2 bg-green-500 text-white rounded"
+            className="px-6 py-3 bg-green-500 text-white rounded font-medium text-lg"
             onClick={doneDrawing}
           >
             Done

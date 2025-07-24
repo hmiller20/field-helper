@@ -74,9 +74,12 @@ export default function ConsentPage() {
       const mongoResult = await mongoResponse.json();
       console.log("MongoDB sync result:", mongoResult);
 
-      // Then sync to Supabase
-      console.log("Syncing to Supabase...");
-      const supabaseResult = await syncSessionsToSupabase(sessionData);
+      // Use the updated sessions with S3 URLs from MongoDB sync
+      const updatedSessionData = mongoResult.updatedSessions || sessionData;
+
+      // Then sync to Supabase with updated data that includes S3 URLs
+      console.log("Syncing to Supabase with updated data...");
+      const supabaseResult = await syncSessionsToSupabase(updatedSessionData);
       
       if (!supabaseResult.success) {
         throw new Error(`Supabase sync failed: ${supabaseResult.message}`);

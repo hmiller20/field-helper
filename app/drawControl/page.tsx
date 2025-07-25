@@ -313,7 +313,7 @@ const DrawingPage: React.FC = () => {
 
       <div className="h-screen flex flex-col bg-background overflow-hidden">
         {/* Container for html2canvas screenshot - takes remaining space after buttons */}
-        <div className="flex-1 flex flex-col p-4 min-h-0">
+        <div className="flex-1 flex flex-col p-2 min-h-0" style={{ maxHeight: 'calc(100vh - 120px)' }}>
           <div ref={containerRef} className="flex-1 relative border border-gray-300 overflow-hidden min-h-0">
             <canvas
               ref={canvasRef}
@@ -377,15 +377,15 @@ const DrawingPage: React.FC = () => {
         </div>
         
         {/* Buttons fixed at bottom */}
-        <div className="flex-shrink-0 p-4 flex justify-center space-x-4">
+        <div className="flex-shrink-0 p-2 flex justify-center space-x-3">
           <button
-            className="px-6 py-3 bg-red-500 text-white rounded font-medium text-lg"
+            className="px-4 py-2 bg-red-500 text-white rounded font-medium text-base"
             onClick={clearCanvas}
           >
             Clear Canvas
           </button>
           <button
-            className="px-6 py-3 bg-green-500 text-white rounded font-medium text-lg"
+            className="px-4 py-2 bg-green-500 text-white rounded font-medium text-base"
             onClick={doneDrawing}
           >
             Done

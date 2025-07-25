@@ -30,8 +30,7 @@ const MAX_AREA = 59670; // 59668 was the 95th percentile area in the last study 
 const DrawDominancePage: React.FC = () => {
   const shapesRef = useRef<{ x: number; y: number }[][]>([]);
   const [showModal, setShowModal] = useState(true);
-  const [showAreaWarning, setShowAreaWarning] = useState(false);
-  const [areaWarningMessage, setAreaWarningMessage] = useState("");
+
   const [canContinue, setCanContinue] = useState(false);
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -198,19 +197,13 @@ const DrawDominancePage: React.FC = () => {
       if (shape.length >= 3) totalArea += calculateArea(shape);
     });
 
-    // Area validation - check if drawing is too small or too large
+    // Area validation - track violations but don't block submission
     if (totalArea < MIN_AREA) {
       incrementSmallViolation(); // Track small drawing violation
-      setAreaWarningMessage("Your drawing looks really small. Please clear the canvas and try drawing a more realistic size.");
-      setShowAreaWarning(true);
-      return;
     }
     
     if (totalArea > MAX_AREA) {
       incrementLargeViolation(); // Track large drawing violation
-      setAreaWarningMessage("Your drawing looks really big. Please clear the canvas and try drawing a more realistic size.");
-      setShowAreaWarning(true);
-      return;
     }
 
     const extents = calculateDrawingExtents(shapesRef.current);
@@ -309,19 +302,7 @@ const DrawDominancePage: React.FC = () => {
       </Dialog>
 
       {/* Area validation warning dialog */}
-      <Dialog open={showAreaWarning} onOpenChange={setShowAreaWarning}>
-        <DrawDialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Drawing Size Issue</DialogTitle>
-            <DialogDescription className="text-lg text-black">
-              {areaWarningMessage}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setShowAreaWarning(false)}>OK</Button>
-          </DialogFooter>
-        </DrawDialogContent>
-      </Dialog>
+
 
       <div className="h-screen flex flex-col bg-background overflow-hidden">
         {/* Container for html2canvas screenshot - takes remaining space after buttons */}

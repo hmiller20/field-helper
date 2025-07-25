@@ -318,11 +318,17 @@ const DrawingPage: React.FC = () => {
             <canvas
               ref={canvasRef}
               className="w-full h-full bg-sky-100"
-              style={{ touchAction: "none" }}
+              style={{ 
+                touchAction: "none",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                WebkitTouchCallout: "none"
+              }}
               onPointerDown={startDrawing}
               onPointerMove={draw}
               onPointerUp={stopDrawing}
               onPointerCancel={stopDrawing}
+              onContextMenu={(e: React.MouseEvent) => e.preventDefault()}
             />
             {/* Scale object: simple tree */}
             <div

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import { getProgressValue } from "@/utils/sessionProgress"
 import Image from "next/image"
 
 export default function ExampleDrawingPage() {
@@ -18,8 +20,17 @@ export default function ExampleDrawingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 bg-background">
-      <Card className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto">
+    <div className="min-h-screen p-2 sm:p-4 bg-background">
+      {/* Progress Bar */}
+      <div className="mb-6 mx-auto max-w-4xl px-4">
+        <Progress value={getProgressValue('exampleDrawing')} className="w-full h-2" />
+        <p className="text-sm text-gray-600 mt-2 text-center">
+          Progress: {getProgressValue('exampleDrawing')}%
+        </p>
+      </div>
+      
+      <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+        <Card className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto">
         <CardContent className="p-3 sm:p-4 md:p-6 flex flex-col items-center gap-4 sm:gap-6 md:gap-8">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-center">Example Drawing</h1>
           
@@ -60,7 +71,8 @@ export default function ExampleDrawingPage() {
             )}
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }

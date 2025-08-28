@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { v1 as uuidv1 } from "uuid"
-import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionData, assignNameColors } from "@/utils/sessionData";
+import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionData, assignNameColors, initializeViolationCounts, syncSessionsToSupabase } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
 import { ToastProvider, Toast, ToastDescription, ToastViewport } from "@/components/ui/toast";
 import PDFViewer from "@/components/PDFViewer";
@@ -55,7 +55,11 @@ export default function ConsentPage() {
         return;
       }
 
-      const response = await fetch("/api/sync", {
+      console.log(`Starting sync for ${sessionData.length} session(s)...`);
+
+      // First sync to MongoDB
+      console.log("Syncing to MongoDB...");
+      const mongoResponse = await fetch("/api/sync", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -63,14 +67,28 @@ export default function ConsentPage() {
         body: JSON.stringify(sessionData),
       });
 
-      if (!response.ok) {
-        throw new Error(`Upload failed with status: ${response.status}`);
+      if (!mongoResponse.ok) {
+        throw new Error(`MongoDB sync failed with status: ${mongoResponse.status}`);
       }
 
-      const result = await response.json();
-      console.log("Sync result:", result);
+      const mongoResult = await mongoResponse.json();
+      console.log("MongoDB sync result:", mongoResult);
+
+      // Use the updated sessions with S3 URLs from MongoDB sync
+      const updatedSessionData = mongoResult.updatedSessions || sessionData;
+
+      // Then sync to Supabase with updated data that includes S3 URLs
+      console.log("Syncing to Supabase with updated data...");
+      const supabaseResult = await syncSessionsToSupabase(updatedSessionData);
       
-      // Only clear all session data after confirming successful upload
+      if (!supabaseResult.success) {
+        throw new Error(`Supabase sync failed: ${supabaseResult.message}`);
+      }
+
+      console.log("Supabase sync result:", supabaseResult.message);
+      console.log("Both syncs completed successfully!");
+      
+      // Only clear all session data after confirming both syncs are successful
       clearAllSessionData();
       
       // Update session count to reflect cleared data
@@ -140,6 +158,9 @@ export default function ConsentPage() {
                 
                 // Assign name colors for this session
                 assignNameColors();
+                
+                // Initialize violation counts for this session
+                initializeViolationCounts();
                 
                 updateSessionData({ id: sessionId });
                 

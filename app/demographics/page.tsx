@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Input } from '../components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Label } from '../components/ui/label';
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
+import { Progress } from '../components/ui/progress';
+import { getProgressValue } from '../utils/sessionProgress';
 import { updateSession, getCurrentSession, addCompletedSession, isSessionComplete } from '../utils/sessionData';
 
 export default function Demographics() {
@@ -17,6 +17,19 @@ export default function Demographics() {
   });
   const [error, setError] = useState<string | null>(null);
 
+  const handleNumberPadClick = (num: string) => {
+    if (num === 'clear') {
+      setFormData(prev => ({ ...prev, age: '' }));
+    } else if (num === 'backspace') {
+      setFormData(prev => ({ ...prev, age: prev.age.slice(0, -1) }));
+    } else {
+      // Limit age to 3 digits (up to 999)
+      if (formData.age.length < 3) {
+        setFormData(prev => ({ ...prev, age: prev.age + num }));
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -25,6 +38,14 @@ export default function Demographics() {
       setError('Please answer both questions before continuing.');
       return;
     }
+    
+    // Validate age range
+    const ageNum = parseInt(formData.age);
+    if (ageNum < 18 || ageNum > 120) {
+      setError('Please enter an age between 18 and 120.');
+      return;
+    }
+    
     console.log('Demographics submitted:', formData);
     
     const session = getCurrentSession();
@@ -62,59 +83,115 @@ export default function Demographics() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-2xl">
+        {/* Progress Bar */}
+        <div className="mb-6">
+          <Progress value={getProgressValue('demographics')} className="w-full h-2" />
+          <p className="text-sm text-gray-600 mt-2 text-center">
+            Progress: {getProgressValue('demographics')}%
+          </p>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-center">
-              Demographics Survey
+              Demographics
             </CardTitle>
-            <CardDescription className="text-center">
-              Please provide some basic information about yourself. This information will remain confidential and is used for research purposes only.
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Age */}
-              <div className="space-y-2">
-                <Label htmlFor="age">Age</Label>
-                <Input
-                  id="age"
-                  type="number"
-                  min="18"
-                  max="120"
-                  value={formData.age}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-                  placeholder="Enter your age"
-                />
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Age Number Pad */}
+              <div className="space-y-4">
+                <Label className="text-lg font-medium">Use the number pad to select your age.</Label>
+                
+                {/* Age Display */}
+                <div className="flex justify-center">
+                  <div className="text-3xl font-bold bg-gray-100 border-2 border-gray-300 rounded px-6 py-3 min-w-[100px] text-center">
+                    {formData.age || '---'}
+                  </div>
+                </div>
+                
+                {/* Number Pad */}
+                <div className="flex flex-col items-center space-y-3">
+                  {/* Numbers 1-9 */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => handleNumberPadClick(num.toString())}
+                        className="w-16 h-16 bg-white border-2 border-gray-300 hover:border-gray-400 rounded text-xl font-semibold transition-colors"
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Bottom row: Clear, 0, Backspace */}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleNumberPadClick('clear')}
+                      className="w-16 h-16 bg-red-100 border-2 border-red-300 hover:border-red-400 rounded text-sm font-semibold transition-colors"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNumberPadClick('0')}
+                      className="w-16 h-16 bg-white border-2 border-gray-300 hover:border-gray-400 rounded text-xl font-semibold transition-colors"
+                    >
+                      0
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNumberPadClick('backspace')}
+                      className="w-16 h-16 bg-yellow-100 border-2 border-yellow-300 hover:border-yellow-400 rounded text-sm font-semibold transition-colors"
+                    >
+                      ⌫
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Gender */}
-              <div className="space-y-3">
-                <Label>Gender</Label>
-                <RadioGroup
-                  value={formData.gender}
-                  onValueChange={(value: string) => setFormData(prev => ({ ...prev, gender: value }))}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="man" id="man" />
-                    <Label htmlFor="man">Man</Label>
+              <div className="space-y-4">
+                <Label className="text-lg font-medium">Gender</Label>
+                <div className="space-y-3">
+                  {/* First row - 3 options */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {['Man', 'Woman', 'Non-binary'].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, gender: option }))}
+                        className={`px-4 py-3 rounded-lg border-2 font-medium text-base transition-all duration-200 ${
+                          formData.gender === option
+                            ? 'bg-blue-500 border-blue-500 text-white'
+                            : 'bg-white border-blue-500 text-black hover:bg-blue-50'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="woman" id="woman" />
-                    <Label htmlFor="woman">Woman</Label>
+                  
+                  {/* Second row - 2 options */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {['Prefer not to say', 'Other'].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, gender: option }))}
+                        className={`px-4 py-3 rounded-lg border-2 font-medium text-base transition-all duration-200 ${
+                          formData.gender === option
+                            ? 'bg-blue-500 border-blue-500 text-white'
+                            : 'bg-white border-blue-500 text-black hover:bg-blue-50'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="non-binary" id="non-binary" />
-                    <Label htmlFor="non-binary">Non-binary</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="prefer-not-to-say" id="prefer-not-to-say" />
-                    <Label htmlFor="prefer-not-to-say">Prefer not to say</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="other" id="other" />
-                    <Label htmlFor="other">Other</Label>
-                  </div>
-                </RadioGroup>
+                </div>
               </div>
 
               {error && (

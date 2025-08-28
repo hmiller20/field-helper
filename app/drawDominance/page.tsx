@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, safeColorNamesInText } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, safeColorNamesInText, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 
@@ -30,8 +30,7 @@ const MAX_AREA = 59670; // 59668 was the 95th percentile area in the last study 
 const DrawDominancePage: React.FC = () => {
   const shapesRef = useRef<{ x: number; y: number }[][]>([]);
   const [showModal, setShowModal] = useState(true);
-  const [showAreaWarning, setShowAreaWarning] = useState(false);
-  const [areaWarningMessage, setAreaWarningMessage] = useState("");
+
   const [canContinue, setCanContinue] = useState(false);
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -56,14 +55,19 @@ const DrawDominancePage: React.FC = () => {
     const session = getCurrentSession();
     if (!session) return "";
     
-    // Check if this is the second block (prestige/dominance)
+    // Check current block position
     const completedBlocksCount = session.blocks?.length || 0;
-    const isSecondBlock = completedBlocksCount === 1; // After control block
+    const currentBlockPosition = completedBlocksCount + 1; // +1 because we're about to start this block
+    const isSecondBlock = currentBlockPosition === 2; // After control block
+    const isThirdBlock = currentBlockPosition === 3; // After control and one prestige/dominance block
+    
+    // Determine which character name to use
+    const characterName = isThirdBlock ? "Bill" : "John";
     
     if (isSecondBlock) {
-      return safeColorNamesInText(`Now, please redraw the outline of John, the person you just read about.`);
+      return safeColorNamesInText(`Now, please redraw the outline of ${characterName}, the person you just read about.`);
     } else {
-      return safeColorNamesInText(`Now, in between the house and the tree, please draw the outline of John, the person you just read about.`);
+      return safeColorNamesInText(`Now, in between the house and the tree, please draw the outline of ${characterName}, the person you just read about.`);
     }
   };
 
@@ -193,17 +197,13 @@ const DrawDominancePage: React.FC = () => {
       if (shape.length >= 3) totalArea += calculateArea(shape);
     });
 
-    // Area validation - check if drawing is too small or too large
+    // Area validation - track violations but don't block submission
     if (totalArea < MIN_AREA) {
-      setAreaWarningMessage("Your drawing looks really small. Please clear the canvas and try drawing a more realistic size.");
-      setShowAreaWarning(true);
-      return;
+      incrementSmallViolation(); // Track small drawing violation
     }
     
     if (totalArea > MAX_AREA) {
-      setAreaWarningMessage("Your drawing looks really big. Please clear the canvas and try drawing a more realistic size.");
-      setShowAreaWarning(true);
-      return;
+      incrementLargeViolation(); // Track large drawing violation
     }
 
     const extents = calculateDrawingExtents(shapesRef.current);
@@ -302,58 +302,56 @@ const DrawDominancePage: React.FC = () => {
       </Dialog>
 
       {/* Area validation warning dialog */}
-      <Dialog open={showAreaWarning} onOpenChange={setShowAreaWarning}>
-        <DrawDialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Drawing Size Issue</DialogTitle>
-            <DialogDescription className="text-lg text-black">
-              {areaWarningMessage}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setShowAreaWarning(false)}>OK</Button>
-          </DialogFooter>
-        </DrawDialogContent>
-      </Dialog>
 
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
-        <div ref={containerRef} className="relative w-full h-[80vh] border border-gray-300 overflow-hidden">
-          <canvas
-            ref={canvasRef}
-            className="w-full h-full bg-sky-100"
-            style={{ touchAction: "none" }}
-            onPointerDown={startDrawing}
-            onPointerMove={draw}
-            onPointerUp={stopDrawing}
-            onPointerCancel={stopDrawing}
-          />
-          {/* Tree */}
-          <div className="absolute bottom-0 right-[0vw]" style={{ pointerEvents: "none", width: "20vw", height: "100%" }}>
-            <svg className="w-full h-full" viewBox="-200 -100 500 500" preserveAspectRatio="xMidYMid meet">
-              <rect x="35" y="340" width="65" height="470" fill="saddlebrown" />
-              <rect x="240" y="-30" width="100" height="15" fill="saddlebrown" transform="rotate(225 260 270)" />
-              <rect x="460" y="115" width="100" height="15" fill="saddlebrown" transform="rotate(155 260 270)" />
-              <circle cx="68" cy="195" r="200" fill="green" stroke="green" strokeWidth="2" />
-            </svg>
+
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        {/* Container for html2canvas screenshot - takes remaining space after buttons */}
+        <div className="flex-1 flex flex-col p-2 min-h-0" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+          <div ref={containerRef} className="flex-1 relative border border-gray-300 overflow-hidden min-h-0">
+            <canvas
+              ref={canvasRef}
+              className="w-full h-full bg-sky-100"
+              style={{ 
+                touchAction: "none",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                WebkitTouchCallout: "none"
+              }}
+              onPointerDown={startDrawing}
+              onPointerMove={draw}
+              onPointerUp={stopDrawing}
+              onPointerCancel={stopDrawing}
+              onContextMenu={(e: React.MouseEvent) => e.preventDefault()}
+            />
+            {/* Tree */}
+            <div className="absolute bottom-0 right-[0vw]" style={{ pointerEvents: "none", width: "20vw", height: "100%" }}>
+              <svg className="w-full h-full" viewBox="-200 -100 500 500" preserveAspectRatio="xMidYMid meet">
+                <rect x="35" y="340" width="65" height="470" fill="saddlebrown" />
+                <rect x="240" y="-30" width="100" height="15" fill="saddlebrown" transform="rotate(225 260 270)" />
+                <rect x="460" y="115" width="100" height="15" fill="saddlebrown" transform="rotate(155 260 270)" />
+                <circle cx="68" cy="195" r="200" fill="green" stroke="green" strokeWidth="2" />
+              </svg>
+            </div>
+            {/* House */}
+            <div className="absolute bottom-0 left-0" style={{ pointerEvents: "none", width: "40vw", height: "100%" }}>
+              <svg className="w-full h-full" viewBox="-200 -100 500 500" preserveAspectRatio="xMinYMid meet">
+                <rect x="-200" y="100" width="470" height="375" fill="#D2B48C" />
+                <rect x="165" y="-30" width="50" height="100" fill="#8B4513" />
+                <polygon points="-200,100 35,-100, 270,100" fill="red" />
+                <rect x="-115" y="230" width="300" height="865" fill="gray" />
+              </svg>
+            </div>
+            {/* Ground */}
+            <div className="absolute bottom-0 left-0 w-full h-3 bg-green-500 pointer-events-none" />
           </div>
-          {/* House */}
-          <div className="absolute bottom-0 left-0" style={{ pointerEvents: "none", width: "40vw", height: "100%" }}>
-            <svg className="w-full h-full" viewBox="-200 -100 500 500" preserveAspectRatio="xMinYMid meet">
-              <rect x="-200" y="100" width="470" height="375" fill="#D2B48C" />
-              <rect x="165" y="-30" width="50" height="100" fill="#8B4513" />
-              <polygon points="-200,100 35,-100, 270,100" fill="red" />
-              <rect x="-115" y="230" width="300" height="865" fill="gray" />
-            </svg>
-          </div>
-          {/* Ground */}
-          <div className="absolute bottom-0 left-0 w-full h-3 bg-green-500 pointer-events-none" />
         </div>
         
-        <div className="mt-4 flex space-x-4">
-          <button className="px-4 py-2 bg-red-500 text-white rounded" onClick={clearCanvas}>
+        {/* Buttons fixed at bottom */}
+        <div className="flex-shrink-0 p-2 flex justify-center space-x-3">
+          <button className="px-4 py-2 bg-red-500 text-white rounded font-medium text-base" onClick={clearCanvas}>
             Clear Canvas
           </button>
-          <button className="px-4 py-2 bg-green-500 text-white rounded" onClick={doneDrawing}>
+          <button className="px-4 py-2 bg-green-500 text-white rounded font-medium text-base" onClick={doneDrawing}>
             Done
           </button>
         </div>

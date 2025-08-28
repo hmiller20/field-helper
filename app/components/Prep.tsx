@@ -6,6 +6,8 @@ import { BlockType, getCurrentSession, safeColorNamesInText } from "@/utils/sess
 import { capitalize } from "@/utils/capitalize";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { getConditionProgress } from "@/utils/sessionProgress";
 
 // Default prep text
 const PREP_TEXT = {
@@ -79,8 +81,17 @@ const Prep = ({ blockType }: { blockType: BlockType }) => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-            <Card className="w-full max-w-2xl">
+        <div className="min-h-screen p-4 bg-background">
+            {/* Progress Bar */}
+            <div className="mb-6 mx-auto max-w-4xl">
+                <Progress value={getConditionProgress(blockType, 'prep')} className="w-full h-2" />
+                <p className="text-sm text-gray-600 mt-2 text-center">
+                    Progress: {getConditionProgress(blockType, 'prep')}%
+                </p>
+            </div>
+            
+            <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+                <Card className="w-full max-w-2xl">
                 <CardContent className="p-6 flex flex-col items-center gap-8">
                     <div 
                         className="text-left text-lg sm:text-xl leading-relaxed max-w-xl"
@@ -103,7 +114,8 @@ const Prep = ({ blockType }: { blockType: BlockType }) => {
                         </p>
                     )}
                 </CardContent>
-            </Card>
+                </Card>
+            </div>
         </div>
     );
 };

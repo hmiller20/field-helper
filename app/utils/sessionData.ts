@@ -55,6 +55,10 @@ export interface Block {
     maxWidth: number;
     maxHeight: number;
     verticality: number;
+    // New silhouette-based metrics
+    areaShoelace?: number; // shoelace area from contour
+    polygon?: Array<[number, number]>; // outer contour points
+    silhouettePngUrl?: string; // processed silhouette image
   };
 }
 

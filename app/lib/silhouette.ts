@@ -6,10 +6,9 @@
 export type SilhouetteResult = {
   silhouettePNG: Blob;
   areaPixels: number;
-  polygon: Array<[number, number]>; // [x,y] contour in image coords
-  areaShoelace: number;
   width: number;
   height: number;
+  verticality: number;
 };
 
 type U8 = Uint8ClampedArray;
@@ -20,14 +19,36 @@ export function getImageData(canvas: HTMLCanvasElement): ImageData {
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-// Convert RGBA to binary mask (0/255). Adjust threshold as needed.
-export function toBinary(img: ImageData, threshold = 200): U8 {
+// Convert RGBA to binary mask (0/255). Uses Tailwind bg-sky-100 as background.
+export function toBinary(img: ImageData): U8 {
   const { data, width, height } = img;
   const out = new Uint8ClampedArray(width * height);
+  
+  // Tailwind bg-sky-100 is RGB(224, 242, 254)
+  const SKY_100_R = 224;
+  const SKY_100_G = 242; 
+  const SKY_100_B = 254;
+  
+  console.log('Using Tailwind bg-sky-100 as background:', [SKY_100_R, SKY_100_G, SKY_100_B]);
+  
   for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-    // luminance; your "ink" should be darker than background
-    const lum = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
-    out[p] = lum < threshold ? 255 : 0; // 255 = ink, 0 = bg
+    const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+    
+    // If pixel is transparent, treat as background
+    if (a < 128) {
+      out[p] = 0; // background
+      continue;
+    }
+    
+    // If pixel is very close to bg-sky-100
+    const colorDist = Math.abs(r - SKY_100_R) + Math.abs(g - SKY_100_G) + Math.abs(b - SKY_100_B);
+    if (colorDist < 20) { // Close to sky-100
+      out[p] = 0; // background
+      continue;
+    }
+    
+    // Otherwise, it's drawing content
+    out[p] = 255; // ink
   }
   return out;
 }
@@ -167,7 +188,6 @@ export function marchingSquares(mask: U8, width: number, height: number): Array<
 // Ramer–Douglas–Peucker (optional) to simplify contour
 export function simplifyRDP(points: Array<[number, number]>, epsilon = 1.0): Array<[number, number]> {
   if (points.length < 3) return points.slice();
-  const sq = (x: number) => x * x;
   const distSq = (p: [number,number], a: [number,number], b: [number,number]) => {
     const [x, y] = p, [x1, y1] = a, [x2, y2] = b;
     const A = x - x1, B = y - y1, C = x2 - x1, D = y2 - y1;
@@ -221,20 +241,88 @@ export async function maskToPNG(mask: U8, width: number, height: number): Promis
 // Full pipeline
 export async function silhouetteFromCanvas(canvas: HTMLCanvasElement): Promise<SilhouetteResult> {
   const { width, height } = canvas;
+  const processingId = Math.random().toString(36).substr(2, 9);
+  console.log(`Silhouette processing [${processingId}]: Canvas dimensions ${width}x${height}`);
+  
+  // Debug: Check if canvas has any content and get a sample hash
+  const ctx = canvas.getContext('2d');
+  let canvasHash = 0;
+  if (ctx) {
+    const testData = ctx.getImageData(0, 0, Math.min(100, width), Math.min(100, height));
+    let hasContent = false;
+    // Create a simple hash of the canvas content for debugging duplicates
+    for (let i = 0; i < testData.data.length; i += 4) {
+      canvasHash = ((canvasHash << 5) - canvasHash + testData.data[i] + testData.data[i+1] + testData.data[i+2]) & 0xffffffff;
+      if (testData.data[i] !== 255 || testData.data[i+1] !== 255 || testData.data[i+2] !== 255) {
+        hasContent = true;
+      }
+    }
+    console.log(`Canvas [${processingId}] has drawing content:`, hasContent, 'hash:', canvasHash);
+  }
+  
   const rgba = getImageData(canvas);
-  const bin = toBinary(rgba, 200);
+  console.log(`Got image data: ${rgba.data.length} bytes`);
+  
+  const bin = toBinary(rgba); // Higher threshold - only very dark pixels are ink
+  const totalPixels = bin.length;
+  const inkPixels = bin.reduce((count, pixel) => count + (pixel ? 1 : 0), 0);
+  console.log(`Binary conversion: ${inkPixels}/${totalPixels} pixels have ink`);
+  
+  // Debug: check some sample pixel values
+  const centerIdx = Math.floor(rgba.data.length/2);
+  console.log('Sample pixel values:', {
+    topLeft: [rgba.data[0], rgba.data[1], rgba.data[2], rgba.data[3]],
+    center: [rgba.data[centerIdx], rgba.data[centerIdx+1], rgba.data[centerIdx+2], rgba.data[centerIdx+3]]
+  });
+  
+  // Check what the background color actually is
+  let whitePixels = 0, blackPixels = 0, otherPixels = 0;
+  for (let i = 0; i < rgba.data.length; i += 4) {
+    const r = rgba.data[i], g = rgba.data[i+1], b = rgba.data[i+2];
+    if (r === 255 && g === 255 && b === 255) whitePixels++;
+    else if (r === 0 && g === 0 && b === 0) blackPixels++;
+    else otherPixels++;
+  }
+  console.log('Pixel color distribution:', { whitePixels, blackPixels, otherPixels });
+  
   const bridged = dilate1px(bin, width, height);
+  const bridgedInkPixels = bridged.reduce((count, pixel) => count + (pixel ? 1 : 0), 0);
+  console.log(`After dilation: ${bridgedInkPixels} ink pixels`);
+  
   const filled = fillInterior(bridged, width, height);
+  const filledPixels = filled.reduce((count, pixel) => count + (pixel ? 1 : 0), 0);
+  console.log(`After fill interior: ${filledPixels} filled pixels`);
+  
   const largest = keepLargest(filled, width, height);
+  const finalPixels = largest.reduce((count, pixel) => count + (pixel ? 1 : 0), 0);
+  console.log(`After keep largest: ${finalPixels} final pixels`);
 
   // area by pixels
   const areaPixels = largest.reduce((a, v) => a + (v ? 1 : 0), 0);
 
-  // outer contour → simplified polygon → shoelace
-  const contour = marchingSquares(largest, width, height);
-  const polygon = simplifyRDP(contour, 1.5);
-  const areaShoelace = shoelaceArea(polygon);
+  // Calculate bounding box of the actual silhouette in pixels
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (largest[y * width + x]) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  // If no pixels found, use 0 dimensions
+  const silhouetteWidth = areaPixels > 0 ? maxX - minX + 1 : 0;
+  const silhouetteHeight = areaPixels > 0 ? maxY - minY + 1 : 0;
+  
+  // Calculate verticality (how high up the drawing is positioned)
+  // Higher values = closer to top of canvas
+  // Invert minY so higher values = closer to top (matching legacy behavior)
+  const verticality = areaPixels > 0 ? height - minY : 0;
+  console.log(`DEBUG: Verticality calculation - height: ${height}, minY: ${minY}, verticality: ${verticality}`);
 
   const silhouettePNG = await maskToPNG(largest, width, height);
-  return { silhouettePNG, areaPixels, polygon, areaShoelace, width, height };
+  return { silhouettePNG, areaPixels, width: silhouetteWidth, height: silhouetteHeight, verticality };
 }

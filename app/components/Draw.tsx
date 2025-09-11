@@ -21,6 +21,9 @@ const Draw = ({ blockType }: Props) => {
   const [canContinue, setCanContinue] = useState(false);
   const shapesRef = useRef<Array<Array<{ x: number; y: number }>>>([]);
 
+  // Test if silhouette function is available
+  console.log('Silhouette function available:', typeof silhouetteFromCanvas);
+
   // Timer effect - 10 seconds like prep pages
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -30,12 +33,24 @@ const Draw = ({ blockType }: Props) => {
   }, []);
 
   const handleDone = async () => {
-    if (!canvasRef.current) return;
+    console.log('handleDone called');
+    if (!canvasRef.current) {
+      console.log('No canvas ref found');
+      return;
+    }
     const canvas = canvasRef.current;
+    console.log('Canvas found:', canvas.width, 'x', canvas.height);
 
     try {
+      console.log('Starting silhouette processing...');
       // Process drawing with silhouette pipeline
       const silhouetteResult = await silhouetteFromCanvas(canvas);
+      console.log('Silhouette result:', {
+        areaPixels: silhouetteResult.areaPixels,
+        width: silhouetteResult.width,
+        height: silhouetteResult.height,
+        pngSize: silhouetteResult.silhouettePNG.size
+      });
 
       // Also capture the original drawing as fallback
       let originalImageData = "";
@@ -62,34 +77,35 @@ const Draw = ({ blockType }: Props) => {
         reader.readAsDataURL(silhouetteResult.silhouettePNG);
       });
 
-      // Calculate bounding box from polygon for backwards compatibility
-      const polygon = silhouetteResult.polygon;
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      polygon.forEach(([x, y]) => {
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-      });
-
       // Add the new block
       const blocks = [...(session.blocks || [])];
+      const drawingData = {
+        // Simplified silhouette-based metrics
+        area: silhouetteResult.areaPixels, // pixel count area
+        maxWidth: silhouetteResult.width, // silhouette width
+        maxHeight: silhouetteResult.height, // silhouette height
+        verticality: silhouetteResult.verticality, // how high up the drawing is positioned
+        // Images
+        pngUrl: originalImageData, // original drawing
+        silhouettePngUrl: silhouetteDataUrl, // processed silhouette
+      };
+      
+      console.log('Drawing data being stored:', {
+        blockType,
+        area: drawingData.area,
+        maxWidth: drawingData.maxWidth,
+        maxHeight: drawingData.maxHeight,
+        verticality: drawingData.verticality,
+        hasPngUrl: !!drawingData.pngUrl,
+        hasSilhouettePngUrl: !!drawingData.silhouettePngUrl,
+        silhouetteDataLength: silhouetteDataUrl.length
+      });
+      
       blocks.push({
         blockType,
         vignetteStartedAt: session.tempVignetteStart || Date.now(),
         survey: session.tempSurvey || {},
-        drawing: {
-          // New silhouette-based metrics
-          area: silhouetteResult.areaPixels, // pixel count area
-          areaShoelace: silhouetteResult.areaShoelace, // shoelace area from contour
-          maxWidth: polygon.length > 0 ? maxX - minX : 0,
-          maxHeight: polygon.length > 0 ? maxY - minY : 0,
-          verticality: polygon.length > 0 ? minY : 0,
-          polygon: polygon, // outer contour points
-          // Images
-          pngUrl: originalImageData, // original drawing
-          silhouettePngUrl: silhouetteDataUrl, // processed silhouette
-        },
+        drawing: drawingData,
       });
 
       // Update session with new block and order if needed
@@ -100,6 +116,8 @@ const Draw = ({ blockType }: Props) => {
       updateSession(updates);
     } catch (error) {
       console.error('Error processing silhouette:', error);
+      console.error('Error details:', error instanceof Error ? error.message : error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       // Fallback to original method if silhouette processing fails
       // ... you could add the original vector-based calculation here as fallback
     }

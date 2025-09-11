@@ -13,14 +13,19 @@ import {
   signOutResearcher
 } from "@/utils/sessionData"
 
-// List of researchers - you can modify this list as needed
 const RESEARCHERS = [
-  "Alondra",
-  "Arthur", 
+  "Amelia",
+  "Brady", 
+  "Edward",
+  "Eva",
   "Harrison",
+  "Megan",
+  "Nate",
+  "Rafa",
   "Ramsey",
   "Sean",
-  "Shelby"
+  "Sofia",
+  "Sophia"
 ]
 
 const CORRECT_PASSWORD = "5678"

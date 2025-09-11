@@ -56,8 +56,6 @@ export interface Block {
     maxHeight: number;
     verticality: number;
     // New silhouette-based metrics
-    areaShoelace?: number; // shoelace area from contour
-    polygon?: Array<[number, number]>; // outer contour points
     silhouettePngUrl?: string; // processed silhouette image
   };
 }
@@ -798,6 +796,8 @@ export function flattenSessionForSupabase(session: Session): Record<string, stri
     flat[`block${idx}_max_height`] = block.drawing?.maxHeight ?? null;
     flat[`block${idx}_verticality`] = block.drawing?.verticality ?? null;
     flat[`block${idx}_png_url`] = block.drawing?.pngUrl ?? null;
+    // Silhouette PNG URL
+    flat[`block${idx}_silhouette_png_url`] = block.drawing?.silhouettePngUrl ?? null;
 
     // Use the correct survey items based on block index
     const surveyItems = idx === 1 ? block1SurveyItems : block23SurveyItems;

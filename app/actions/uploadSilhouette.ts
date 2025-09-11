@@ -13,10 +13,9 @@ export async function processAndUpload(canvas: HTMLCanvasElement, userId: string
       jsonPath: null, 
       meta: {
         area_pixels: result.areaPixels,
-        area_shoelace_px2: result.areaShoelace,
         width: result.width,
         height: result.height,
-        polygon: result.polygon,
+        verticality: result.verticality,
         uploaded_at: new Date().toISOString(),
       }
     };
@@ -29,13 +28,12 @@ export async function processAndUpload(canvas: HTMLCanvasElement, userId: string
     .upload(pngPath, result.silhouettePNG, { contentType: 'image/png', upsert: true });
   if (pngErr) throw pngErr;
 
-  // 2) Metadata upload (area + polygon)
+  // 2) Metadata upload (area + dimensions + verticality)
   const meta = {
     area_pixels: result.areaPixels,
-    area_shoelace_px2: result.areaShoelace, // in pixel^2
     width: result.width,
     height: result.height,
-    polygon: result.polygon, // [[x,y],...]
+    verticality: result.verticality,
     uploaded_at: new Date().toISOString(),
   };
   const jsonPath = `drawings/${userId}/${drawId}.json`;

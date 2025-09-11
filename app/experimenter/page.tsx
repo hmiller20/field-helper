@@ -12,8 +12,7 @@ export default function ExperimenterPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  // Sample list of experimenters; update as needed.
-  const experimentersList = ["Alondra", "Arthur", "Harrison", "Ramsey", "Sean", "Shelby"];
+  const experimentersList = ["Amelia", "Brady", "Edward", "Eva", "Harrison", "Megan", "Nate", "Rafa", "Ramsey", "Sean", "Sofia", "Sophia"];
 
   // Handle button click: validate and record data to local storage and navigate to consent screen.
   const handleSave = () => {

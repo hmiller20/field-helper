@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, safeColorNamesInText, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
+import { silhouetteFromCanvas } from "@/lib/silhouette";
 
 // Drawing area validation constants
 const MIN_AREA = 4600; // 4602 was the 5th percentile area in the last study (n=215)
@@ -132,33 +133,6 @@ const DrawPrestigePage: React.FC = () => {
     shapePointsRef.current = [];
   };
 
-  const calculateArea = (points: { x: number; y: number }[]): number => {
-    if (points.length < 3) return 0;
-    let area = 0;
-    for (let i = 0; i < points.length; i++) {
-      const nextIndex = (i + 1) % points.length;
-      area += points[i].x * points[nextIndex].y - points[nextIndex].x * points[i].y;
-    }
-    return Math.abs(area) / 2;
-  };
-
-  const calculateDrawingExtents = (shapes: { x: number; y: number }[][]) => {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    shapes.forEach((shape) => {
-      shape.forEach(({ x, y }) => {
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-      });
-    });
-    
-    // Get canvas height for inverting minY
-    const canvas = canvasRef.current;
-    const canvasHeight = canvas ? canvas.getBoundingClientRect().height : 0;
-    
-    return { width: maxX - minX, height: maxY - minY, minY: canvasHeight - minY };
-  };
 
   const doneDrawing = async () => {
     console.log("=== PRESTIGE DONE DRAWING CALLED ===");
@@ -170,11 +144,18 @@ const DrawPrestigePage: React.FC = () => {
     const ctx = canvas.getContext("2d");
     ctx?.beginPath();
 
-    // Calculate metrics
-    let totalArea = 0;
-    shapesRef.current.forEach((shape) => {
-      if (shape.length >= 3) totalArea += calculateArea(shape);
+    // Silhouette processing
+    const timestamp = Date.now();
+    console.log(`Starting silhouette processing in drawPrestige at ${timestamp}...`);
+    const silhouetteResult = await silhouetteFromCanvas(canvas);
+    console.log('Silhouette result:', {
+      areaPixels: silhouetteResult.areaPixels,
+      width: silhouetteResult.width,
+      height: silhouetteResult.height,
+      pngSize: silhouetteResult.silhouettePNG.size
     });
+
+    const totalArea = silhouetteResult.areaPixels;
 
     // Area validation - track violations but don't block submission
     if (totalArea < MIN_AREA) {
@@ -185,7 +166,12 @@ const DrawPrestigePage: React.FC = () => {
       incrementLargeViolation(); // Track large drawing violation
     }
 
-    const extents = calculateDrawingExtents(shapesRef.current);
+    // Use silhouette dimensions instead of vector extents
+    const extents = {
+      width: silhouetteResult.width,
+      height: silhouetteResult.height,
+      minY: 0 // Not applicable for raster approach
+    };
 
     // Capture image
     let imageData = "";
@@ -197,6 +183,13 @@ const DrawPrestigePage: React.FC = () => {
     } else {
       imageData = canvas.toDataURL("image/png");
     }
+
+    // Convert silhouette PNG blob to data URL
+    const silhouetteDataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(silhouetteResult.silhouettePNG);
+    });
 
     // Update session
     console.log("=== GETTING SESSION FROM LOCALSTORAGE ===");
@@ -219,8 +212,9 @@ const DrawPrestigePage: React.FC = () => {
         area: totalArea,
         maxWidth: extents.width,
         maxHeight: extents.height,
-        verticality: extents.minY,
+        verticality: silhouetteResult.verticality,
         pngUrl: imageData,
+        silhouettePngUrl: silhouetteDataUrl,
       },
     });
 

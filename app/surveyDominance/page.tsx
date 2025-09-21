@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { updateSession, getCurrentSession, safeColorNamesInText } from "@/utils/sessionData"
+import { updateSession, safeColorNamesInText, getCharacterForCondition } from "@/utils/sessionData"
 
 // Types for our survey questions
 type QuestionType = "likert";
@@ -77,16 +77,9 @@ export default function SurveyDominancePage() {
   const [responses, setResponses] = useState<Record<string, string | number>>({})
   const router = useRouter()
 
-  // Function to determine person's name based on block position
+  // Function to get the character assigned to the dominance condition
   const getPersonName = (): string => {
-    const session = getCurrentSession();
-    if (!session) return "John"; // default
-    
-    const completedBlocksCount = session.blocks?.length || 0;
-    const currentBlockPosition = completedBlocksCount + 1;
-    
-    // Control is block 1 (John), second block is John, third block is Bill
-    return currentBlockPosition === 3 ? "Bill" : "John";
+    return getCharacterForCondition('dominance');
   };
 
   // Create questions with the appropriate name substituted

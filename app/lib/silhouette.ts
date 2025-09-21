@@ -75,6 +75,64 @@ export function dilate1px(mask: U8, width: number, height: number): U8 {
   return out;
 }
 
+// Morphological dilation with configurable radius
+export function dilate(mask: U8, width: number, height: number, radius: number): U8 {
+  const out = new Uint8ClampedArray(mask.length);
+  const idx = (x: number, y: number) => y * width + x;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let on = 0;
+      for (let dy = -radius; dy <= radius && !on; dy++) {
+        for (let dx = -radius; dx <= radius && !on; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            // Use circular structuring element
+            if (dx * dx + dy * dy <= radius * radius && mask[idx(nx, ny)]) {
+              on = 1;
+            }
+          }
+        }
+      }
+      out[idx(x, y)] = on ? 255 : 0;
+    }
+  }
+  return out;
+}
+
+// Morphological erosion with configurable radius
+export function erode(mask: U8, width: number, height: number, radius: number): U8 {
+  const out = new Uint8ClampedArray(mask.length);
+  const idx = (x: number, y: number) => y * width + x;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let allOn = 1;
+      for (let dy = -radius; dy <= radius && allOn; dy++) {
+        for (let dx = -radius; dx <= radius && allOn; dx++) {
+          const nx = x + dx, ny = y + dy;
+          // Use circular structuring element
+          if (dx * dx + dy * dy <= radius * radius) {
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height || !mask[idx(nx, ny)]) {
+              allOn = 0;
+            }
+          }
+        }
+      }
+      out[idx(x, y)] = allOn ? 255 : 0;
+    }
+  }
+  return out;
+}
+
+// Morphological closing (dilation followed by erosion)
+export function morphologicalClose(mask: U8, width: number, height: number, radius: number): U8 {
+  console.log(`Applying morphological closing with radius ${radius}`);
+  const dilated = dilate(mask, width, height, radius);
+  const closed = erode(dilated, width, height, radius);
+  return closed;
+}
+
 // Flood-fill from borders to mark exterior; then invert => filled regions
 export function fillInterior(mask: U8, width: number, height: number): U8 {
   const N = width * height;
@@ -223,6 +281,183 @@ export function shoelaceArea(poly: Array<[number, number]>): number {
   return Math.abs(sum) / 2;
 }
 
+// External contour tracing via border-following (Moore-Neighbor)
+export function traceExternalContour(mask: U8, width: number, height: number): Array<[number, number]> {
+  const idx = (x: number, y: number) => y * width + x;
+
+  // Find a starting boundary pixel
+  let sx = -1, sy = -1;
+  outer: for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (mask[idx(x, y)]) {
+        // Check if it has a background neighbor => boundary
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (!dx && !dy) continue;
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height || !mask[idx(nx, ny)]) {
+              sx = x; sy = y; break outer;
+            }
+          }
+        }
+      }
+    }
+  }
+  if (sx < 0) return [];
+
+  const contour: Array<[number, number]> = [];
+  let cx = sx, cy = sy;
+  // Prev direction; start looking from the pixel to the "west" (dx=-1,dy=0)
+  let pdx = -1, pdy = 0;
+
+  const neighbors = [
+    [ 0, -1], [ 1, -1], [ 1,  0], [ 1,  1],
+    [ 0,  1], [-1,  1], [-1, 0], [-1, -1]
+  ];
+
+  do {
+    contour.push([cx, cy]);
+    // Rotate search so we start from the neighbor just clockwise from where we came
+    let start = neighbors.findIndex(([dx, dy]) => dx === pdx && dy === pdy);
+    if (start < 0) start = 0;
+    let found = false, ndx = 0, ndy = 0, nx = cx, ny = cy;
+    for (let k = 0; k < 8; k++) {
+      const [dx, dy] = neighbors[(start + 1 + k) % 8]; // Turn right and scan
+      const tx = cx + dx, ty = cy + dy;
+      if (tx >= 0 && tx < width && ty >= 0 && ty < height && mask[idx(tx, ty)]) {
+        // Step to the *next* boundary pixel in that direction
+        found = true; ndx = dx; ndy = dy; nx = tx; ny = ty; break;
+      }
+    }
+    if (!found) break; // Degenerate
+    // Next prev-direction is opposite of the step (so we search around the new edge correctly)
+    pdx = -ndx; pdy = -ndy;
+    cx = nx; cy = ny;
+  } while (!(cx === sx && cy === sy) || contour.length === 1);
+
+  return contour;
+}
+
+// Polygon area using shoelace formula
+export function polygonArea(points: Array<[number, number]>): number {
+  if (points.length < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < points.length; i++) {
+    const [x1, y1] = points[i];
+    const [x2, y2] = points[(i + 1) % points.length];
+    sum += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(sum) / 2;
+}
+
+// Extract all pixel coordinates from a binary mask
+export function getPixelCoords(mask: U8, width: number, height: number): Array<[number, number]> {
+  const coords: Array<[number, number]> = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (mask[y * width + x]) {
+        coords.push([x, y]);
+      }
+    }
+  }
+  return coords;
+}
+
+// Compute convex hull using Graham scan algorithm
+export function convexHull(points: Array<[number, number]>): Array<[number, number]> {
+  if (points.length < 3) return points.slice();
+
+  // Find the bottom-most point (or left-most in case of tie)
+  let bottom = 0;
+  for (let i = 1; i < points.length; i++) {
+    if (points[i][1] < points[bottom][1] ||
+        (points[i][1] === points[bottom][1] && points[i][0] < points[bottom][0])) {
+      bottom = i;
+    }
+  }
+
+  // Swap bottom point to first position
+  [points[0], points[bottom]] = [points[bottom], points[0]];
+  const pivot = points[0];
+
+  // Sort points by polar angle with respect to pivot
+  const sortedPoints = points.slice(1).sort((a, b) => {
+    const angleA = Math.atan2(a[1] - pivot[1], a[0] - pivot[0]);
+    const angleB = Math.atan2(b[1] - pivot[1], b[0] - pivot[0]);
+    if (angleA !== angleB) return angleA - angleB;
+
+    // If angles are equal, sort by distance
+    const distA = (a[0] - pivot[0]) ** 2 + (a[1] - pivot[1]) ** 2;
+    const distB = (b[0] - pivot[0]) ** 2 + (b[1] - pivot[1]) ** 2;
+    return distA - distB;
+  });
+
+  // Graham scan
+  const hull = [pivot];
+
+  for (const point of sortedPoints) {
+    // Remove points that make a clockwise turn
+    while (hull.length >= 2) {
+      const [x1, y1] = hull[hull.length - 2];
+      const [x2, y2] = hull[hull.length - 1];
+      const [x3, y3] = point;
+
+      // Cross product to determine turn direction
+      const cross = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
+      if (cross <= 0) {
+        hull.pop();
+      } else {
+        break;
+      }
+    }
+    hull.push(point);
+  }
+
+  return hull;
+}
+
+// Fill convex hull polygon into a binary mask
+export function fillConvexHull(hull: Array<[number, number]>, width: number, height: number): U8 {
+  const mask = new Uint8ClampedArray(width * height);
+
+  if (hull.length < 3) return mask;
+
+  // For each row, find intersections with polygon edges
+  for (let y = 0; y < height; y++) {
+    const intersections: number[] = [];
+
+    // Check each edge of the hull
+    for (let i = 0; i < hull.length; i++) {
+      const [x1, y1] = hull[i];
+      const [x2, y2] = hull[(i + 1) % hull.length];
+
+      // Skip horizontal edges
+      if (y1 === y2) continue;
+
+      // Check if scanline intersects this edge
+      if ((y1 <= y && y < y2) || (y2 <= y && y < y1)) {
+        // Calculate intersection x-coordinate
+        const x = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
+        intersections.push(x);
+      }
+    }
+
+    // Sort intersections and fill between pairs
+    intersections.sort((a, b) => a - b);
+    for (let i = 0; i < intersections.length; i += 2) {
+      if (i + 1 < intersections.length) {
+        const startX = Math.max(0, Math.ceil(intersections[i]));
+        const endX = Math.min(width - 1, Math.floor(intersections[i + 1]));
+        for (let x = startX; x <= endX; x++) {
+          mask[y * width + x] = 255;
+        }
+      }
+    }
+  }
+
+  return mask;
+}
+
 // Convert binary mask → PNG blob
 export async function maskToPNG(mask: U8, width: number, height: number): Promise<Blob> {
   const canvas = document.createElement('canvas');
@@ -231,7 +466,9 @@ export async function maskToPNG(mask: U8, width: number, height: number): Promis
   const img = ctx.createImageData(width, height);
   for (let i = 0, p = 0; p < mask.length; p++, i += 4) {
     const v = mask[p]; // 0 or 255
-    img.data[i] = img.data[i+1] = img.data[i+2] = v;
+    // Invert colors: white background (255), black drawing (0)
+    const invertedV = 255 - v;
+    img.data[i] = img.data[i+1] = img.data[i+2] = invertedV;
     img.data[i+3] = 255;
   }
   ctx.putImageData(img, 0, 0);
@@ -288,23 +525,27 @@ export async function silhouetteFromCanvas(canvas: HTMLCanvasElement): Promise<S
   const bridged = dilate1px(bin, width, height);
   const bridgedInkPixels = bridged.reduce((count, pixel) => count + (pixel ? 1 : 0), 0);
   console.log(`After dilation: ${bridgedInkPixels} ink pixels`);
-  
-  const filled = fillInterior(bridged, width, height);
-  const filledPixels = filled.reduce((count, pixel) => count + (pixel ? 1 : 0), 0);
-  console.log(`After fill interior: ${filledPixels} filled pixels`);
-  
-  const largest = keepLargest(filled, width, height);
-  const finalPixels = largest.reduce((count, pixel) => count + (pixel ? 1 : 0), 0);
-  console.log(`After keep largest: ${finalPixels} final pixels`);
 
-  // area by pixels
-  const areaPixels = largest.reduce((a, v) => a + (v ? 1 : 0), 0);
+  const largest = keepLargest(bridged, width, height);
+  const largestPixels = largest.reduce((count, pixel) => count + (pixel ? 1 : 0), 0);
+  console.log(`After keep largest: ${largestPixels} pixels (outline only)`);
 
-  // Calculate bounding box of the actual silhouette in pixels
+  // Extract external contour of the largest component
+  const externalContour = traceExternalContour(largest, width, height);
+  console.log(`External contour has ${externalContour.length} points`);
+
+  // Calculate area using shoelace formula on the external contour
+  const areaPixels = polygonArea(externalContour);
+  console.log(`Polygon area from external contour: ${areaPixels} pixels`);
+
+  // For visualization, we'll still create a filled mask (but area calculation uses contour)
+  const final = largest; // Just use the outline for the PNG
+
+  // Calculate bounding box of the filled silhouette in pixels
   let minX = width, minY = height, maxX = 0, maxY = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (largest[y * width + x]) {
+      if (final[y * width + x]) {
         minX = Math.min(minX, x);
         minY = Math.min(minY, y);
         maxX = Math.max(maxX, x);
@@ -323,6 +564,6 @@ export async function silhouetteFromCanvas(canvas: HTMLCanvasElement): Promise<S
   const verticality = areaPixels > 0 ? height - minY : 0;
   console.log(`DEBUG: Verticality calculation - height: ${height}, minY: ${minY}, verticality: ${verticality}`);
 
-  const silhouettePNG = await maskToPNG(largest, width, height);
+  const silhouettePNG = await maskToPNG(final, width, height);
   return { silhouettePNG, areaPixels, width: silhouetteWidth, height: silhouetteHeight, verticality };
 }

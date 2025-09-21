@@ -20,7 +20,7 @@ export default function ExampleDrawingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen p-2 sm:p-4 bg-background">
+    <div className="min-h-screen p-2 sm:p-4 bg-white">
       {/* Progress Bar */}
       <div className="mb-6 mx-auto max-w-4xl px-4">
         <Progress value={getProgressValue('exampleDrawing')} className="w-full h-2" />
@@ -60,7 +60,7 @@ export default function ExampleDrawingPage() {
               }`}
               variant="secondary"
               style={{ opacity: canContinue ? 1 : 0.5 }}
-              onClick={canContinue ? () => router.push('/prepControl') : undefined}
+              onClick={canContinue ? () => router.push('/prepBaseline') : undefined}
             >
               Continue
             </Button>

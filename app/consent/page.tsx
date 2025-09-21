@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { v1 as uuidv1 } from "uuid"
-import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionData, assignNameColors, initializeViolationCounts, syncSessionsToSupabase } from "@/utils/sessionData";
+import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionData, assignNameColors, assignCharacterConditions, initializeViolationCounts, syncSessionsToSupabase, generateChronologicalSessionId, generateTestSessionId } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
 import { ToastProvider, Toast, ToastDescription, ToastViewport } from "@/components/ui/toast";
 import PDFViewer from "@/components/PDFViewer";
@@ -57,9 +57,9 @@ export default function ConsentPage() {
 
       console.log(`Starting sync for ${sessionData.length} session(s)...`);
 
-      // First sync to MongoDB
-      console.log("Syncing to MongoDB...");
-      const mongoResponse = await fetch("/api/sync", {
+      // First upload images to S3 via the sync API (which now only handles S3 uploads)
+      console.log("Uploading images to S3...");
+      const s3Response = await fetch("/api/sync", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -67,15 +67,15 @@ export default function ConsentPage() {
         body: JSON.stringify(sessionData),
       });
 
-      if (!mongoResponse.ok) {
-        throw new Error(`MongoDB sync failed with status: ${mongoResponse.status}`);
+      if (!s3Response.ok) {
+        throw new Error(`S3 upload failed with status: ${s3Response.status}`);
       }
 
-      const mongoResult = await mongoResponse.json();
-      console.log("MongoDB sync result:", mongoResult);
+      const s3Result = await s3Response.json();
+      console.log("S3 upload result:", s3Result);
 
-      // Use the updated sessions with S3 URLs from MongoDB sync
-      const updatedSessionData = mongoResult.updatedSessions || sessionData;
+      // Use the updated sessions with S3 URLs from S3 upload
+      const updatedSessionData = s3Result.updatedSessions || sessionData;
 
       // Then sync to Supabase with updated data that includes S3 URLs
       console.log("Syncing to Supabase with updated data...");
@@ -86,7 +86,7 @@ export default function ConsentPage() {
       }
 
       console.log("Supabase sync result:", supabaseResult.message);
-      console.log("Both syncs completed successfully!");
+      console.log("Upload and sync completed successfully!");
       
       // Only clear all session data after confirming both syncs are successful
       clearAllSessionData();
@@ -153,25 +153,42 @@ export default function ConsentPage() {
               disabled={!hasReadInfo}
               variant="secondary"
               onClick={() => {
-                const sessionId = uuidv1();
-                console.log("=== CONSENT: Generated session ID ===", sessionId);
+                // Get the most recent session to check if it's a test
+                const sessionData = getSessionData();
+                const mostRecentSession = sessionData[sessionData.length - 1];
+                const isTestSession = mostRecentSession?.sessionTest || false;
                 
-                // Assign name colors for this session
+                // Generate appropriate session ID
+                const chronologicalSessionId = isTestSession 
+                  ? generateTestSessionId() 
+                  : generateChronologicalSessionId();
+                
+                // Generate UUID for internal use
+                const internalId = uuidv1();
+                
+                console.log("=== CONSENT: Generated IDs ===");
+                console.log("Internal UUID:", internalId);
+                console.log("Chronological Session ID:", chronologicalSessionId);
+                console.log("Is test session:", isTestSession);
+                
+                // Create session with both IDs
+                updateSessionData({ 
+                  id: internalId,
+                  sessionId: chronologicalSessionId
+                });
+                
+                // Then assign name colors and character conditions
                 assignNameColors();
+                assignCharacterConditions();
                 
                 // Initialize violation counts for this session
                 initializeViolationCounts();
                 
-                updateSessionData({ id: sessionId });
-                
                 // Verify what was actually stored
-                const storedSession = localStorage.getItem("session");
-                console.log("=== CONSENT: Stored in localStorage ===", storedSession);
-                
-                // Verify getCurrentSession works
                 const currentSession = getCurrentSession();
                 console.log("=== CONSENT: getCurrentSession result ===", currentSession);
-                console.log("=== CONSENT: Session ID from getCurrentSession ===", currentSession?.id);
+                console.log("=== CONSENT: Internal ID ===", currentSession?.id);
+                console.log("=== CONSENT: Session ID ===", currentSession?.sessionId);
                 
                 router.push('/exampleDrawing');
               }}

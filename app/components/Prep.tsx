@@ -7,20 +7,13 @@ import { capitalize } from "@/utils/capitalize";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { getConditionProgress } from "@/utils/sessionProgress";
+import { getConditionProgress, getProgressValue } from "@/utils/sessionProgress";
 
-// Default prep text
+// Prep text based on position in sessionOrder
 const PREP_TEXT = {
-  control: "Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.",
-  prestige: "Now you will read about <strong>Bill,</strong> another person being considered for a similar position at a different company in town. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.",
-  dominance: "Now you will read about <strong>Bill,</strong> another person being considered for a similar position at a different company in town. Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later."
-};
-
-// Second block versions (when it's the first prestige/dominance block about John)
-const PREP_TEXT_SECOND_BLOCK = {
-  control: "Please read the following description carefully. Think about what this person might look like in real life. Also, think about how they might behave. You will be asked to recall details of the description later.", // control text doesn't change
-  prestige: "We are now going to <strong>share more information about John.</strong> Please read the following description carefully.",
-  dominance: "We are now going to <strong>share more information about John.</strong> Please read the following description carefully."
+  first: "Please read the following description carefully. You will be asked to recall details of the description later.",
+  second: "Nice job! Now you will read about another person. Please read the following description carefully. You will be asked to recall details of the description later.",
+  third: "Great work! Now you will read about a third person. Please read the following description carefully. You will be asked to recall details of the description later."
 };
 
 // Remove the local colorNamesInText function and use the imported one
@@ -35,44 +28,39 @@ const Prep = ({ blockType }: { blockType: BlockType }) => {
     const router = useRouter();
     const [canContinue, setCanContinue] = useState(false);
 
-    // Function to determine if current block is second or third
-    const getCurrentBlockPosition = (): number => {
+    // Function to get current block's position in sessionOrder (0, 1, or 2)
+    const getSessionOrderPosition = (): number => {
       const session = getCurrentSession();
-      if (!session) return 1;
+      if (!session || !session.sessionOrder) return 0;
       
-      // Control is always first (position 1)
-      if (blockType === 'control') return 1;
-      
-      // For prestige/dominance, check completed blocks
-      const completedBlocksCount = session.blocks?.length || 0;
-      return completedBlocksCount + 1; // +1 because we're about to start this block
+      // Find the position of this blockType in the sessionOrder
+      const position = session.sessionOrder.indexOf(blockType);
+      return position !== -1 ? position : 0;
     };
 
-    // Function to get the appropriate prep text
+    // Function to get the appropriate prep text based on sessionOrder position
     const getPrepText = (): string => {
-      const position = getCurrentBlockPosition();
+      const position = getSessionOrderPosition();
       
       console.log("=== PREP TEXT DEBUG ===");
       console.log("Block type:", blockType);
-      console.log("Current position:", position);
-      console.log("Will use SECOND_BLOCK?", (blockType === 'prestige' || blockType === 'dominance') && position === 2);
+      console.log("Position in sessionOrder:", position);
       
-      // For prestige/dominance blocks, use different text if it's the second block
-      if ((blockType === 'prestige' || blockType === 'dominance') && position === 2) {
-        console.log("Using SECOND_BLOCK text (John):", PREP_TEXT_SECOND_BLOCK[blockType]);
-        return PREP_TEXT_SECOND_BLOCK[blockType];
-      }
+      // Map position to text key
+      const textKeys = ['first', 'second', 'third'] as const;
+      const textKey = textKeys[position] || 'first';
       
-      // Default text for all other cases
-      console.log("Using main PREP_TEXT (Bill):", PREP_TEXT[blockType]);
-      return PREP_TEXT[blockType];
+      console.log("Using text key:", textKey);
+      console.log("Text:", PREP_TEXT[textKey]);
+      
+      return PREP_TEXT[textKey];
     };
 
     // Timer effect - shorter duration for prep screen
     useEffect(() => {
         const timer = setTimeout(() => {
             setCanContinue(true);
-        }, 10000); // 10 seconds
+        }, 3000); // 3 seconds
         return () => clearTimeout(timer);
     }, []);
 
@@ -84,9 +72,12 @@ const Prep = ({ blockType }: { blockType: BlockType }) => {
         <div className="min-h-screen p-4 bg-background">
             {/* Progress Bar */}
             <div className="mb-6 mx-auto max-w-4xl">
-                <Progress value={getConditionProgress(blockType, 'prep')} className="w-full h-2" />
+                <Progress
+                    value={blockType === 'control' ? getProgressValue('prepControl') : getConditionProgress(blockType, 'prep')}
+                    className="w-full h-2"
+                />
                 <p className="text-sm text-gray-600 mt-2 text-center">
-                    Progress: {getConditionProgress(blockType, 'prep')}%
+                    Progress: {blockType === 'control' ? getProgressValue('prepControl') : getConditionProgress(blockType, 'prep')}%
                 </p>
             </div>
             

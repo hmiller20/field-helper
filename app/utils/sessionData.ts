@@ -1,6 +1,6 @@
 import { NameColor, NAME_COLORS } from "./colors";
 
-export type BlockType = 'control' | 'prestige' | 'dominance';
+export type BlockType = 'prestige' | 'dominance' | 'lowStatus' | 'control';
 
 // Researcher time tracking interfaces
 export interface ResearcherSession {
@@ -45,6 +45,15 @@ const formatESTDateTime = (timestamp: number): string => {
   });
 };
 
+export interface BaselineDrawing {
+  area: number;
+  maxWidth: number;
+  maxHeight: number;
+  verticality: number;
+  pngUrl: string;
+  silhouettePngUrl?: string;
+}
+
 export interface Block {
   blockType: BlockType;
   vignetteStartedAt: number;
@@ -62,19 +71,22 @@ export interface Block {
 
 export interface Session {
   // Core session identification
-  id: string;
-  sessionId?: string; // Legacy field for backward compatibility
+  id: string; // UUID for internal use
+  sessionId?: string; // Human-readable chronological ID (e.g., "1", "2", "test")
+  
+  // Baseline drawing (separate from experimental blocks)
+  baselineDrawing?: BaselineDrawing;
   
   // Experimental design fields
-  order: ['prestige','dominance'] | ['dominance','prestige']; // set once - this is the order for blocks 2 & 3
-  presentedFirst: 'prestige' | 'dominance'; // tracks which condition came first (block 2)
-  blocks: Block[]; // Should contain exactly 3 blocks: control, then prestige/dominance in randomized order
+  sessionOrder: BlockType[]; // Randomized order of the 3 experimental conditions
+  blocks: Block[]; // Contains exactly 3 blocks for experimental conditions
+  order?: ('prestige' | 'dominance')[]; // For 2-condition substudy (prestige/dominance only)
   
   // Additional data fields (from old SessionData interface)
   experimenter?: string;
   sessionNotes?: string;
   demographics?: Record<string, string>;
-  allResponses?: Record<string, unknown>; // All survey responses combined for MongoDB sync
+  allResponses?: Record<string, unknown>; // All survey responses combined for data sync
   
   // Drawing data (for compatibility)
   drawingData?: {
@@ -93,11 +105,25 @@ export interface Session {
   tempSurvey?: Record<string, string | number>;
 
   // Name color
-  nameColors: { John: NameColor, Bill: NameColor };
+  nameColors?: { John: NameColor, Bill: NameColor, Mike: NameColor };
+  
+  // Character-condition assignments (each condition gets one character)
+  characterAssignments?: {
+    prestige: 'John' | 'Bill' | 'Mike';
+    dominance: 'John' | 'Bill' | 'Mike';
+    lowStatus: 'John' | 'Bill' | 'Mike';
+  };
   
   // Drawing violation tracking
   smallViolations?: number;
   largeViolations?: number;
+  
+  // Session quality flags
+  sessionGood?: boolean;
+  sessionTest?: boolean;
+
+  // Counterbalancing tracking
+  presentedFirst?: 'prestige' | 'dominance' | 'lowStatus' | 'control';
 }
 
 const STORAGE_KEY = "session";
@@ -168,6 +194,19 @@ export const updateSession = (updates: Partial<Session>) => {
     return;
   }
   setSession({ ...session, ...updates });
+};
+
+/**
+ * Set which condition was presented first for counterbalancing tracking.
+ */
+export const setPresentedFirst = (condition: 'prestige' | 'dominance' | 'lowStatus' | 'control') => {
+  const session = getCurrentSession();
+  if (!session) {
+    console.error("No existing session found to set presentedFirst.");
+    return;
+  }
+  setSession({ ...session, presentedFirst: condition });
+  console.log(`Set presentedFirst to: ${condition}`);
 };
 
 /**
@@ -250,6 +289,7 @@ export const updateSessionData = (newData: Partial<Session>) => {
       const newSession = {
         id: newData.id,
         blocks: [],
+        sessionOrder: [],
         smallViolations: 0,
         largeViolations: 0,
         ...newData
@@ -303,27 +343,56 @@ export const updateMostRecentSession = (newData: Partial<Session>) => {
 };
 
 /**
- * Set the presentedFirst field when counterbalancing order is determined.
- * This should be called immediately after the randomization occurs.
+ * Generate a randomized session order for the three experimental conditions.
+ * Returns one of the 6 possible orderings.
  */
-export const setPresentedFirst = (presentedFirst: 'prestige' | 'dominance') => {
+export const generateSessionOrder = (): BlockType[] => {
+  const allOrderings = [
+    ['prestige', 'dominance', 'lowStatus'],
+    ['prestige', 'lowStatus', 'dominance'],
+    ['dominance', 'prestige', 'lowStatus'],
+    ['dominance', 'lowStatus', 'prestige'],
+    ['lowStatus', 'prestige', 'dominance'],
+    ['lowStatus', 'dominance', 'prestige']
+  ] as BlockType[][];
+  
+  const randomIndex = Math.floor(Math.random() * allOrderings.length);
+  return allOrderings[randomIndex];
+};
+
+/**
+ * Set the session order when counterbalancing is determined.
+ * This should be called after the baseline drawing is completed.
+ */
+export const setSessionOrder = (sessionOrder: BlockType[]) => {
   const session = getCurrentSession();
   if (!session) {
-    console.error("No existing session found to set presentedFirst.");
+    console.error("No existing session found to set sessionOrder.");
     return;
   }
   
   // Update the Session interface
-  setSession({ ...session, presentedFirst });
+  setSession({ ...session, sessionOrder });
   
-  // Also update session data for syncing
-  updateSession({ presentedFirst });
-  
-  console.log(`Counterbalancing complete: ${presentedFirst} condition presented first`);
+  console.log(`Session order set: [${sessionOrder.join(', ')}]`);
 };
 
 /**
- * Convert Session data to format suitable for MongoDB syncing.
+ * Save the baseline drawing data to the current session.
+ */
+export const saveBaselineDrawing = (baselineDrawing: BaselineDrawing) => {
+  const session = getCurrentSession();
+  if (!session) {
+    console.error("No existing session found to save baseline drawing.");
+    return;
+  }
+  
+  setSession({ ...session, baselineDrawing });
+  console.log(`Baseline drawing saved with area: ${baselineDrawing.area}`);
+};
+
+/**
+ * Convert Session data to format suitable for data syncing.
  * Flattens the blocks structure and extracts key data points.
  */
 export const prepareSessionForSync = (session: Session): Session => {
@@ -367,25 +436,16 @@ export const prepareSessionForSync = (session: Session): Session => {
  */
 export const getNextBlockType = (): BlockType | null => {
   const session = getCurrentSession();
-  if (!session) return 'control'; // Start with control if no session
+  if (!session) return null;
+  
+  if (!session.sessionOrder) return null;
   
   const completedBlockTypes = session.blocks.map(block => block.blockType);
   
-  // Control is always first
-  if (!completedBlockTypes.includes('control')) {
-    return 'control';
-  }
-  
-  // After control, follow the randomized order
-  if (session.order) {
-    const [first, second] = session.order;
-    
-    if (!completedBlockTypes.includes(first)) {
-      return first;
-    }
-    
-    if (!completedBlockTypes.includes(second)) {
-      return second;
+  // Follow the randomized session order
+  for (const blockType of session.sessionOrder) {
+    if (!completedBlockTypes.includes(blockType)) {
+      return blockType;
     }
   }
   
@@ -394,20 +454,24 @@ export const getNextBlockType = (): BlockType | null => {
 };
 
 /**
- * Check if all three blocks (control, prestige, dominance) are completed.
+ * Check if baseline and all three experimental blocks are completed.
  */
 export const isSessionComplete = (): boolean => {
   const session = getCurrentSession();
   if (!session) return false;
   
+  // Check if baseline is completed
+  if (!session.baselineDrawing) return false;
+  
+  // Check if all experimental blocks are completed
   const completedBlockTypes = session.blocks.map(block => block.blockType);
-  const requiredBlocks: BlockType[] = ['control', 'prestige', 'dominance'];
+  const requiredBlocks: BlockType[] = ['prestige', 'dominance', 'lowStatus'];
   
   return requiredBlocks.every(blockType => completedBlockTypes.includes(blockType));
 };
 
 /**
- * Validate that the session has the proper structure for three blocks.
+ * Validate that the session has the proper structure for baseline + three experimental blocks.
  * Useful for debugging and ensuring data integrity.
  */
 export const validateSessionStructure = (session: Session): boolean => {
@@ -418,9 +482,9 @@ export const validateSessionStructure = (session: Session): boolean => {
       return false;
     }
 
-    // Check that we don't have more than 3 blocks
+    // Check that we don't have more than 3 experimental blocks
     if (session.blocks.length > 3) {
-      console.error('Session has more than 3 blocks');
+      console.error('Session has more than 3 experimental blocks');
       return false;
     }
 
@@ -432,10 +496,9 @@ export const validateSessionStructure = (session: Session): boolean => {
       return false;
     }
 
-    // If we have control block, ensure order is set
-    const hasControl = blockTypes.includes('control');
-    if (hasControl && !session.order) {
-      console.error('Session has control block but no order set');
+    // If we have experimental blocks, ensure sessionOrder is set
+    if (session.blocks.length > 0 && !session.sessionOrder) {
+      console.error('Session has experimental blocks but no sessionOrder set');
       return false;
     }
 
@@ -448,7 +511,7 @@ export const validateSessionStructure = (session: Session): boolean => {
 
 /**
  * Debug function to log current session state and block completion status.
- * Useful for troubleshooting the three-block flow.
+ * Useful for troubleshooting the baseline + three experimental block flow.
  */
 export const debugSessionState = (): void => {
   const session = getCurrentSession();
@@ -459,9 +522,9 @@ export const debugSessionState = (): void => {
   
   console.log('=== SESSION DEBUG ===');
   console.log('Session ID:', session.id);
-  console.log('Order:', session.order);
-  console.log('Presented First:', session.presentedFirst);
-  console.log('Blocks completed:', session.blocks.length);
+  console.log('Baseline Drawing:', session.baselineDrawing ? 'Completed' : 'Not completed');
+  console.log('Session Order:', session.sessionOrder);
+  console.log('Experimental blocks completed:', session.blocks.length);
   
   session.blocks.forEach((block, index) => {
     console.log(`Block ${index + 1}:`, {
@@ -524,6 +587,59 @@ export const resetSessionCount = (): void => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(SESSION_COUNT_KEY, JSON.stringify({ count: 0 }));
   console.log("Session count reset to 0");
+};
+
+// Chronological Session ID Management
+const NEXT_SESSION_ID_KEY = "nextSessionId";
+
+/**
+ * Get the next available chronological session ID
+ */
+export const getNextSessionId = (): number => {
+  if (typeof window === 'undefined') return 1;
+  const data = localStorage.getItem(NEXT_SESSION_ID_KEY);
+  if (!data) return 1;
+  try {
+    const parsed = JSON.parse(data);
+    return parsed.nextId || 1;
+  } catch (error) {
+    console.error("Error parsing next session ID from localStorage:", error);
+    return 1;
+  }
+};
+
+/**
+ * Generate and reserve the next chronological session ID
+ * Returns the ID and increments the counter for future sessions
+ */
+export const generateChronologicalSessionId = (): string => {
+  if (typeof window === 'undefined') return '1';
+  
+  const nextId = getNextSessionId();
+  const sessionId = nextId.toString();
+  
+  // Increment for next session
+  localStorage.setItem(NEXT_SESSION_ID_KEY, JSON.stringify({ nextId: nextId + 1 }));
+  console.log(`Generated chronological session ID: ${sessionId}, next ID will be: ${nextId + 1}`);
+  
+  return sessionId;
+};
+
+/**
+ * Generate a test session ID without incrementing the counter
+ */
+export const generateTestSessionId = (): string => {
+  console.log("Generated test session ID: test");
+  return "test";
+};
+
+/**
+ * Reset the chronological session ID counter
+ */
+export const resetChronologicalSessionIds = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(NEXT_SESSION_ID_KEY, JSON.stringify({ nextId: 1 }));
+  console.log("Chronological session ID counter reset to 1");
 };
 
 /**
@@ -684,18 +800,94 @@ export function assignNameColors() {
   // Clear any existing name colors to ensure fresh randomization
   localStorage.removeItem("nameColors");
   
-  // 50/50 random assignment
-  const johnColor: NameColor = Math.random() < 0.5 ? "blue" : "orange";
-  const billColor: NameColor = johnColor === "blue" ? "orange" : "blue";
+  // Randomly shuffle the three colors among the three names
+  const colors: NameColor[] = ["blue", "orange", "green"];
+  
+  // Fisher-Yates shuffle
+  for (let i = colors.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [colors[i], colors[j]] = [colors[j], colors[i]];
+  }
+  
+  const nameColors = {
+    John: colors[0],
+    Bill: colors[1],
+    Mike: colors[2]
+  };
   
   // Store in localStorage for backward compatibility
-  localStorage.setItem("nameColors", JSON.stringify({ John: johnColor, Bill: billColor }));
+  localStorage.setItem("nameColors", JSON.stringify(nameColors));
   
   // Also store in current session if it exists
   const session = getCurrentSession();
   if (session) {
-    updateSession({ nameColors: { John: johnColor, Bill: billColor } });
+    updateSession({ nameColors });
   }
+}
+
+/**
+ * Assign characters to experimental conditions randomly.
+ * Each condition gets exactly one character, and each character appears in exactly one condition.
+ */
+export function assignCharacterConditions() {
+  // First check if assignments already exist to prevent re-randomization
+  const existingSession = getCurrentSession();
+  if (existingSession?.characterAssignments) {
+    console.log("Character assignments already exist:", existingSession.characterAssignments);
+    return existingSession.characterAssignments;
+  }
+  
+  const characters = ["John", "Bill", "Mike"] as const;
+  
+  // Randomly shuffle characters
+  const shuffledCharacters = [...characters];
+  for (let i = shuffledCharacters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffledCharacters[i], shuffledCharacters[j]] = [shuffledCharacters[j], shuffledCharacters[i]];
+  }
+  
+  // Assign one character to each condition
+  const characterAssignments = {
+    prestige: shuffledCharacters[0],
+    dominance: shuffledCharacters[1],
+    lowStatus: shuffledCharacters[2]
+  };
+  
+  // Store in current session
+  const session = getCurrentSession();
+  if (session) {
+    updateSession({ characterAssignments });
+    console.log("NEW character assignments created and stored:", characterAssignments);
+  } else {
+    console.error("No session found when trying to store character assignments");
+  }
+  
+  return characterAssignments;
+}
+
+/**
+ * Get the character assigned to a specific experimental condition
+ */
+export function getCharacterForCondition(condition: 'prestige' | 'dominance' | 'lowStatus'): 'John' | 'Bill' | 'Mike' {
+  const session = getCurrentSession();
+  
+  if (!session) {
+    console.error(`No session found when getting character for condition: ${condition}`);
+    return 'John'; // fallback
+  }
+  
+  if (!session.characterAssignments) {
+    console.error(`No character assignments found for condition: ${condition}. Session:`, session);
+    console.error("Attempting to create character assignments...");
+    
+    // Try to create assignments if they're missing
+    const assignments = assignCharacterConditions();
+    return assignments[condition];
+  }
+  
+  const character = session.characterAssignments[condition];
+  console.log(`Getting character for condition ${condition}: ${character}`);
+  return character;
 }
 
 /**
@@ -739,7 +931,7 @@ export function incrementLargeViolation() {
   }
 }
 
-export function getNameColor(name: "John" | "Bill"): string {
+export function getNameColor(name: "John" | "Bill" | "Mike"): string {
   // SSR check - return default color during server-side rendering
   if (typeof window === 'undefined') {
     return "#000"; // Default black color for SSR
@@ -761,33 +953,54 @@ export function getNameColor(name: "John" | "Bill"): string {
   }
 }
 
-export function flattenSessionForSupabase(session: Session): Record<string, string | number | null> {
+export function flattenSessionForSupabase(session: Session): Record<string, string | number | boolean | null> {
   // Ensure violation fields are always integers
   const smallViolations = typeof session.smallViolations === 'number' ? session.smallViolations : 0;
   const largeViolations = typeof session.largeViolations === 'number' ? session.largeViolations : 0;
   
   console.log(`Session ${session.id}: smallViolations=${smallViolations}, largeViolations=${largeViolations}`);
   
-  const flat: Record<string, string | number | null> = {
-    presented_first: session.presentedFirst,
+  // Auto-populate session_notes based on flags
+  let sessionNotes = session.sessionNotes || null;
+  if (session.sessionTest) {
+    sessionNotes = sessionNotes ? `Test - ${sessionNotes}` : 'Test';
+  } else if (session.sessionGood) {
+    sessionNotes = sessionNotes ? `All good - ${sessionNotes}` : 'All good';
+  }
+  
+  const flat: Record<string, string | number | boolean | null> = {
+    session_order: session.sessionOrder ? session.sessionOrder.join(',') : null,
     experimenter: session.experimenter || null,
-    session_notes: session.sessionNotes || null,
+    session_notes: sessionNotes,
+    session_id: session.sessionId || null,
+    session_good: session.sessionGood || false,
+    session_test: session.sessionTest || false,
     demographics_age: session.demographics?.age ? parseInt(session.demographics.age, 10) : null,
     demographics_gender: session.demographics?.gender || null,
     name_color_john: session.nameColors?.John || null,
     name_color_bill: session.nameColors?.Bill || null,
+    name_color_mike: session.nameColors?.Mike || null,
+    character_prestige: session.characterAssignments?.prestige || null,
+    character_dominance: session.characterAssignments?.dominance || null,
+    character_lowstatus: session.characterAssignments?.lowStatus || null,
     small_violations: smallViolations,
     large_violations: largeViolations,
     synced_at: session.syncedAt || null,
     sync_time: session.syncTime || null,
+    // Baseline drawing data
+    baseline_area: session.baselineDrawing?.area ?? null,
+    baseline_max_width: session.baselineDrawing?.maxWidth ?? null,
+    baseline_max_height: session.baselineDrawing?.maxHeight ?? null,
+    baseline_verticality: session.baselineDrawing?.verticality ?? null,
+    baseline_png_url: session.baselineDrawing?.pngUrl ?? null,
+    baseline_silhouette_png_url: session.baselineDrawing?.silhouettePngUrl ?? null,
     // id will be generated by Supabase uuid_generate_v4()
   };
 
-  // Define survey items for each block type based on your actual schema (all lowercase)
-  const block1SurveyItems = ["dommanip1", "dommanip2", "attncheck3", "premanip1", "premanip2", "statusmanip1", "statusmanip2"];
-  const block23SurveyItems = ["dommanip1", "dommanip2", "premanip1", "premanip2", "statusmanip1", "statusmanip2", "attncheck5", "attncheck2"];
+  // Define survey items for experimental blocks (all have same survey structure)
+  const surveyItems = ["dommanip1", "dommanip2", "premanip1", "premanip2", "statusmanip1", "statusmanip2", "attncheck6", "attncheck2"];
 
-  // For each block, assign to block1, block2, block3 based on order in session.blocks
+  // For each experimental block, assign to block1, block2, block3 based on order in session.blocks
   session.blocks.forEach((block: Block, i: number) => {
     const idx = i + 1; // 1-based for block1, block2, block3
     flat[`block${idx}_type`] = block.blockType;
@@ -798,9 +1011,6 @@ export function flattenSessionForSupabase(session: Session): Record<string, stri
     flat[`block${idx}_png_url`] = block.drawing?.pngUrl ?? null;
     // Silhouette PNG URL
     flat[`block${idx}_silhouette_png_url`] = block.drawing?.silhouettePngUrl ?? null;
-
-    // Use the correct survey items based on block index
-    const surveyItems = idx === 1 ? block1SurveyItems : block23SurveyItems;
     
     surveyItems.forEach((item: string) => {
       // The survey keys in your data are like domManip1_c, domManip1_d, domManip1_p, etc.
@@ -872,5 +1082,6 @@ export function safeColorNamesInText(text: string): string {
   // In the browser, apply coloring
   return text
     .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
-    .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
+    .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`)
+    .replace(/Mike/g, `<span style="color: ${getNameColor("Mike")}; font-weight: bold;">Mike</span>`);
 } 

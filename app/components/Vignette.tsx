@@ -1,28 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BlockType, getCurrentSession, updateSession, safeColorNamesInText } from "@/utils/sessionData";
+import { BlockType, getCurrentSession, updateSession, safeColorNamesInText, getCharacterForCondition } from "@/utils/sessionData";
 import { capitalize } from "@/utils/capitalize";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { getConditionProgress } from "@/utils/sessionProgress";
+import { getConditionProgress, getProgressValue } from "@/utils/sessionProgress";
 
-const VIGNETTES: Record<BlockType, string> = {
-  control: "John is a 35-year-old man who lives in a mid-sized city. He has brown hair and usually wears business casual clothing to work. John graduated from college with a degree in business administration. He has been working in various professional roles for about ten years since graduation. John typically wakes up early each morning, has coffee and breakfast, then commutes to his office downtown.",
+// Vignette templates with [NAME] placeholder
+const VIGNETTE_TEMPLATES: Record<Exclude<BlockType, 'control'>, string> = {
   prestige:
-    "A company is hiring a new CEO, and <strong>Bill</strong> is being considered for the position. Bill has several years of workplace experience and has gained a considerable degree of influence over others. His leadership strategy focuses on <strong>leveraging his skills and abilities</strong> to influence others. In leadership roles, he fosters positive relationships and teamwork among his subordinates. Bill <strong>generally takes input from others on how tasks should be accomplished</strong>, although he is also good at making suggestions about how to improve ideas provided by others. When Bill's subordinates have good ideas, they <strong>feel comfortable bringing them up and asking to implement them</strong>, even when those ideas are contrary to Bill's view of the situation. Many subordinates follow Bill's advice because they <strong>respect and admire him</strong>. In sum, Bill adopts a leadership style focused on making <strong>skillful decisions</strong>.",
+    "A company is hiring a new CEO, and <strong>[NAME]</strong> is being considered for the position. [NAME] has several years of workplace experience and has gained a considerable degree of influence over others. His leadership strategy focuses on <strong>leveraging his skills and abilities</strong> to influence others. In leadership roles, he fosters positive relationships and teamwork among his subordinates. [NAME] <strong>generally takes input from others on how tasks should be accomplished</strong>, although he is also good at making suggestions about how to improve ideas provided by others. When [NAME]'s subordinates have good ideas, they <strong>feel comfortable bringing them up and asking to implement them</strong>, even when those ideas are contrary to [NAME]'s view of the situation. Many subordinates follow [NAME]'s advice because they <strong>respect and admire him</strong>. In sum, [NAME] adopts a leadership style focused on making <strong>skillful decisions</strong>.",
   dominance:
-    "A company is hiring a new CEO, and <strong>Bill</strong> is being considered for the position. Bill has several years of workplace experience and has gained a considerable degree of influence over others. Bill has <strong>aggressively moved through the ranks</strong> into a position of leadership. He is a <strong>dominant leader</strong> who prioritizes having control and authority over the people who report to him. When Bill makes a decision, that decision is <strong>final</strong>, even when others disagree. Bill has his own views of how tasks should be accomplished, and he uses reward and punishment to get people to follow his ideas. Although his subordinates sometimes have good ideas, those subordinates know it is better to let Bill have his way rather than contradict his ideas. Many subordinates <strong>fear Bill</strong>, and for that reason they follow his orders. In sum, Bill adopts a dominant leadership style focused on making <strong>definitive decisions</strong>.",
-};
-
-// Second block versions (more information about John)
-const VIGNETTES_SECOND_BLOCK: Record<BlockType, string> = {
-  control: "John is a 35-year-old man who lives in a mid-sized city. He has brown hair and usually wears business casual clothing to work. John graduated from college with a degree in business administration. He has been working in various professional roles for about ten years since graduation. John typically wakes up early each morning, has coffee and breakfast, then commutes to his office downtown.", // control text doesn't change
-  prestige:
-    "A company is hiring a new CEO, and <strong>John</strong> is being considered for the position. John has several years of workplace experience and has gained a considerable degree of influence over others. His leadership strategy focuses on <strong>leveraging his skills and abilities</strong> to influence others. In leadership roles, he fosters positive relationships and teamwork among his subordinates. John <strong>generally takes input from others on how tasks should be accomplished</strong>, although he is also good at making suggestions about how to improve ideas provided by others. When John's subordinates have good ideas, they <strong>feel comfortable bringing them up and asking to implement them</strong>, even when those ideas are contrary to John's view of the situation. Many subordinates follow John's advice because they <strong>respect and admire him</strong>. In sum, John adopts a leadership style focused on making <strong>skillful decisions</strong>.",
-  dominance:
-    "A company is hiring a new CEO, and <strong>John</strong> is being considered for the position. John has several years of workplace experience and has gained a considerable degree of influence over others. John has <strong>aggressively moved through the ranks</strong> into a position of leadership. He is a <strong>dominant leader</strong> who prioritizes having control and authority over the people who report to him. When John makes a decision, that decision is <strong>final</strong>, even when others disagree. John has his own views of how tasks should be accomplished, and he uses reward and punishment to get people to follow his ideas. Although his subordinates sometimes have good ideas, those subordinates know it is better to let John have his way rather than contradict his ideas. Many subordinates <strong>fear John</strong>, and for that reason they follow his orders. In sum, John adopts a dominant leadership style focused on making <strong>definitive decisions</strong>.",
+    "A company is hiring a new CEO, and <strong>[NAME]</strong> is being considered for the position. [NAME] has several years of workplace experience and has gained a considerable degree of influence over others. [NAME] has <strong>aggressively moved through the ranks</strong> into a position of leadership. He is a <strong>dominant leader</strong> who prioritizes having control and authority over the people who report to him. When [NAME] makes a decision, that decision is <strong>final</strong>, even when others disagree. [NAME] has his own views of how tasks should be accomplished, and he uses reward and punishment to get people to follow his ideas. Although his subordinates sometimes have good ideas, those subordinates know it is better to let [NAME] have his way rather than contradict his ideas. Many subordinates <strong>fear [NAME]</strong>, and for that reason they follow his orders. In sum, [NAME] adopts a dominant leadership style focused on making <strong>definitive decisions</strong>.",
+  lowStatus:
+    "A company is hiring a new assistant, and <strong>[NAME]</strong> is being considered for the position. [NAME] does not have much workplace experience and has not had many opportunities to gain influence over others. In previous roles, he has performed his assigned tasks <strong>without drawing attention or taking on additional responsibilities.</strong> [NAME] typically follows instructions well, but he rarely offers suggestions for improvements or takes the initiative to solve problems. His interactions with supervisors and peers are usually formal and reserved, reflecting his <strong>limited role within the organization.</strong> Although [NAME] is dependable when it comes to completing routine duties, he neither seeks nor is offered opportunities to advance or lead. In sum, [NAME] has <strong>limited influence over others.</strong> He seeks jobs in which he can focus on handling simple tasks without having to lead others or shoulder too much responsibility."
 };
 
 // Remove the local colorNamesInText function and use the imported one
@@ -37,37 +30,26 @@ const Vignette = ({ blockType }: { blockType: BlockType }) => {
   const router = useRouter();
   const [canContinue, setCanContinue] = useState(false);
 
-  // Function to determine if current block is second or third
-  const getCurrentBlockPosition = (): number => {
-    const session = getCurrentSession();
-    if (!session) return 1;
-    
-    // Control is always first (position 1)
-    if (blockType === 'control') return 1;
-    
-    // For prestige/dominance, check completed blocks
-    const completedBlocksCount = session.blocks?.length || 0;
-    return completedBlocksCount + 1; // +1 because we're about to start this block
-  };
-
   // Function to get the appropriate vignette text
   const getVignetteText = (): string => {
-    const position = getCurrentBlockPosition();
-    
     console.log("=== VIGNETTE TEXT DEBUG ===");
     console.log("Block type:", blockType);
-    console.log("Current position:", position);
-    console.log("Will use SECOND_BLOCK?", (blockType === 'prestige' || blockType === 'dominance') && position === 2);
     
-    // For prestige/dominance blocks, use different text if it's the second block
-    if ((blockType === 'prestige' || blockType === 'dominance') && position === 2) {
-      console.log("Using SECOND_BLOCK text (John):", VIGNETTES_SECOND_BLOCK[blockType].substring(0, 100) + "...");
-      return VIGNETTES_SECOND_BLOCK[blockType];
+    // For experimental conditions, get the assigned character and substitute into template
+    if (blockType === 'prestige' || blockType === 'dominance' || blockType === 'lowStatus') {
+      const characterName = getCharacterForCondition(blockType);
+      const template = VIGNETTE_TEMPLATES[blockType];
+      const vignetteText = template.replace(/\[NAME\]/g, characterName);
+      
+      console.log(`Using character: ${characterName} for condition: ${blockType}`);
+      console.log("Vignette text:", vignetteText.substring(0, 100) + "...");
+      
+      return vignetteText;
     }
     
-    // Default text for all other cases
-    console.log("Using main VIGNETTES (Bill):", VIGNETTES[blockType].substring(0, 100) + "...");
-    return VIGNETTES[blockType];
+    // For control condition (not implemented yet, but keeping for future use)
+    console.log("Control condition not implemented");
+    return "Control vignette text placeholder";
   };
 
   // save start time in session temp field
@@ -104,9 +86,12 @@ const Vignette = ({ blockType }: { blockType: BlockType }) => {
     <div className="min-h-screen p-4 bg-background">
       {/* Progress Bar */}
       <div className="mb-6 mx-auto max-w-4xl">
-        <Progress value={getConditionProgress(blockType, 'vignette')} className="w-full h-2" />
+        <Progress
+          value={blockType === 'control' ? getProgressValue('vignetteControl') : getConditionProgress(blockType, 'vignette')}
+          className="w-full h-2"
+        />
         <p className="text-sm text-gray-600 mt-2 text-center">
-          Progress: {getConditionProgress(blockType, 'vignette')}%
+          Progress: {blockType === 'control' ? getProgressValue('vignetteControl') : getConditionProgress(blockType, 'vignette')}%
         </p>
       </div>
       

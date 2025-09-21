@@ -14,6 +14,45 @@ async function processSilhouetteImages(session: Session) {
   const processedSession = { ...session };
   console.log(`DEBUG: Processing ${processedSession.blocks?.length || 0} blocks`);
   
+  // Process baseline drawing silhouette image first
+  if (processedSession.baselineDrawing?.silhouettePngUrl && processedSession.baselineDrawing.silhouettePngUrl.startsWith('data:image/png;base64,')) {
+    try {
+      console.log(`Uploading baseline silhouette for session ${session.id}`);
+      
+      // Extract base64 data
+      const base64Data = processedSession.baselineDrawing.silhouettePngUrl.split(',')[1];
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Create filename using human-readable session ID: session_123_baseline_silhouette.png
+      const sessionIdentifier = session.sessionId || session.id; // Use sessionId if available, fallback to UUID
+      const filename = `session_${sessionIdentifier}_baseline_silhouette.png`;
+      const filePath = `silhouettes/${filename}`;
+      
+      // Upload to Supabase Storage using admin client to bypass RLS
+      const { error } = await (supabaseAdmin || supabase).storage
+        .from('drawings')
+        .upload(filePath, buffer, {
+          contentType: 'image/png',
+          upsert: true
+        });
+      
+      if (error) {
+        console.error(`Failed to upload baseline silhouette for ${session.id}:`, error);
+      } else {
+        // Get public URL
+        const { data: { publicUrl } } = (supabaseAdmin || supabase).storage
+          .from('drawings')
+          .getPublicUrl(filePath);
+        
+        // Replace base64 URL with public URL
+        processedSession.baselineDrawing.silhouettePngUrl = publicUrl;
+        console.log(`Successfully uploaded baseline silhouette: ${publicUrl}`);
+      }
+    } catch (error) {
+      console.error(`Error processing baseline silhouette for ${session.id}:`, error);
+    }
+  }
+  
   // Process each block's silhouette image
   for (let i = 0; i < processedSession.blocks.length; i++) {
     const block = processedSession.blocks[i];
@@ -28,8 +67,9 @@ async function processSilhouetteImages(session: Session) {
         const base64Data = block.drawing.silhouettePngUrl.split(',')[1];
         const buffer = Buffer.from(base64Data, 'base64');
         
-        // Create filename: sessionId_blockType_silhouette.png
-        const filename = `${session.id}_${block.blockType}_silhouette.png`;
+        // Create filename using human-readable session ID: session_123_prestige_silhouette.png
+        const sessionIdentifier = session.sessionId || session.id; // Use sessionId if available, fallback to UUID
+        const filename = `session_${sessionIdentifier}_${block.blockType}_silhouette.png`;
         const filePath = `silhouettes/${filename}`;
         
         // Upload to Supabase Storage using admin client to bypass RLS

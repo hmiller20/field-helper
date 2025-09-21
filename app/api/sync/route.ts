@@ -1,8 +1,6 @@
 "use server";
 
 console.log("Loaded env variables:");
-console.log("MONGODB_URI:", process.env.MONGODB_URI ? "SET" : "NOT SET");
-console.log("MONGODB_DB:", process.env.MONGODB_DB);
 console.log("AWS_S3_BUCKET:", process.env.AWS_S3_BUCKET);
 console.log("AWS_REGION:", process.env.AWS_REGION);
 console.log("AWS_ACCESS_KEY_ID:", process.env.AWS_ACCESS_KEY_ID ? "SET" : "NOT SET");
@@ -12,21 +10,11 @@ console.log("AWS_SECRET_ACCESS_KEY:", process.env.AWS_SECRET_ACCESS_KEY ? "SET" 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { NextResponse } from "next/server";
-import { MongoClient, Db } from "mongodb";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 // Ensure you have these environment variables set.
-const uri = process.env.MONGODB_URI as string;
-const dbName = process.env.MONGODB_DB as string;
 const s3Bucket = process.env.AWS_S3_BUCKET as string;
 const s3Region = process.env.AWS_REGION as string;
-
-if (!uri) {
-  throw new Error("Missing environment variable: MONGODB_URI");
-}
-if (!dbName) {
-  throw new Error("Missing environment variable: MONGODB_DB");
-}
 if (!s3Bucket) {
   throw new Error("Missing environment variable: AWS_S3_BUCKET");
 }
@@ -92,18 +80,6 @@ async function uploadImageToS3(imageData: string, sessionId: string): Promise<st
   }
 }
 
-async function connectToDatabase(): Promise<{ db: Db }> {
-  // Connect to the database
-  const client = new MongoClient(uri);
-  try {
-    await client.connect();
-  } catch (connErr) {
-    console.error("MongoDB connection error:", connErr);
-    throw connErr;
-  }
-  const db = client.db(dbName);
-  return { db };
-}
 
 export async function POST(request: Request) {
   try {
@@ -156,46 +132,11 @@ export async function POST(request: Request) {
       }
     }
 
-    const { db } = await connectToDatabase();
-
-    // Use a single minimal collection for all sync logs.
-    const collection = db.collection<Record<string, unknown>>("session_logs");
-
-    // Check for existing sessions with the same id
-    const sessionIds = sessionsWithSyncTime.map(session => session.id);
-    const existingSessions = await collection.find({ id: { $in: sessionIds } }).toArray();
+    console.log(`Successfully processed ${sessionsWithSyncTime.length} sessions and uploaded images to S3`);
     
-    if (existingSessions.length > 0) {
-      console.warn(`Found ${existingSessions.length} existing sessions with the same ids. Skipping these sessions.`);
-      // Filter out sessions that already exist
-      const newSessions = sessionsWithSyncTime.filter(
-        session => !existingSessions.some(existing => existing.id === session.id)
-      );
-      
-      if (newSessions.length === 0) {
-        return NextResponse.json({ 
-          success: true, 
-          message: "All sessions already exist in database",
-          skipped: existingSessions.length,
-          updatedSessions: sessionsWithSyncTime // Still return updated sessions even if not inserted
-        });
-      }
-      
-      // Insert only the new sessions
-      const result = await collection.insertMany(newSessions);
-      return NextResponse.json({ 
-        success: true, 
-        insertedIds: result.insertedIds,
-        skipped: existingSessions.length,
-        updatedSessions: newSessions // Return the updated sessions with S3 URLs
-      });
-    }
-
-    // If no existing sessions found, insert all sessions
-    const result = await collection.insertMany(sessionsWithSyncTime);
     return NextResponse.json({ 
       success: true, 
-      insertedIds: result.insertedIds,
+      message: `Successfully processed ${sessionsWithSyncTime.length} sessions`,
       updatedSessions: sessionsWithSyncTime // Return the updated sessions with S3 URLs
     });
   } catch (error) {

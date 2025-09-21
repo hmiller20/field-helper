@@ -232,7 +232,7 @@ const DrawingPage: React.FC = () => {
   // Function to get the modal text with conditional "redraw" styling for second block
   const getModalText = (): string => {
     // Control is always block 1, so it will always say "draw" not "redraw"
-    return safeColorNamesInText(`Now, in between the house and the tree, please draw the outline of John, the person you just read about.`);
+    return safeColorNamesInText(`Please draw the outline of John, the person you just read about.`);
   };
 
   return (
@@ -274,13 +274,13 @@ const DrawingPage: React.FC = () => {
       {/* Area validation warning dialog */}
 
 
-      <div className="h-screen flex flex-col bg-background overflow-hidden">
+      <div className="h-screen flex flex-col bg-gray-200 overflow-hidden">
         {/* Container for html2canvas screenshot - takes remaining space after buttons */}
         <div className="flex-1 flex flex-col p-2 min-h-0" style={{ maxHeight: 'calc(100vh - 120px)' }}>
           <div ref={containerRef} className="flex-1 relative border border-gray-300 overflow-hidden min-h-0">
             <canvas
               ref={canvasRef}
-              className="w-full h-full bg-sky-100"
+              className="w-full h-full bg-white"
               style={{ 
                 touchAction: "none",
                 userSelect: "none",
@@ -293,55 +293,6 @@ const DrawingPage: React.FC = () => {
               onPointerCancel={stopDrawing}
               onContextMenu={(e: React.MouseEvent) => e.preventDefault()}
             />
-            {/* Scale object: simple tree */}
-            <div
-              className="absolute bottom-0 right-[0vw]"
-              style={{ 
-                pointerEvents: "none", 
-                width: "20vw", 
-                height: "100%" 
-              }}
-            >
-              <svg
-                className="w-full h-full"
-                viewBox="-200 -100 500 500"
-                preserveAspectRatio="xMidYMid meet"
-              >
-                {/* Tree trunk */}
-                <rect x="35" y="340" width="65" height="470" fill="saddlebrown" />
-                {/* Tree branches */}
-                <rect x="240" y="-30" width="100" height="15" fill="saddlebrown" transform="rotate(225 260 270)" />
-                <rect x="460" y="115" width="100" height="15" fill="saddlebrown" transform="rotate(155 260 270)" />
-                {/* Tree canopy */}
-                <circle cx="68" cy="195" r="200" fill="green" stroke="green" strokeWidth="2" />
-              </svg>
-            </div>
-            {/* Simple house for scale */}
-            <div
-              className="absolute bottom-0 left-0"
-              style={{ 
-                pointerEvents: "none", 
-                width: "40vw", 
-                height: "100%" 
-              }}
-            >
-              <svg
-                className="w-full h-full"
-                viewBox="-200 -100 500 500"
-                preserveAspectRatio="xMinYMid meet"
-              >
-                {/* House body: tan square */}
-                <rect x="-200" y="100" width="470" height="375" fill="#D2B48C" />
-                {/* Chimney */}
-                <rect x="165" y="-30" width="50" height="100" fill="#8B4513" />
-                {/* Roof */}
-                <polygon points="-200,100 35,-100, 270,100" fill="red" />
-                {/* Garage door */}
-                <rect x="-115" y="230" width="300" height="865" fill="gray" />
-              </svg>
-            </div>
-            {/* Ground line: green horizontal line */}
-            <div className="absolute bottom-0 left-0 w-full h-3 bg-green-500 pointer-events-none" />
           </div>
         </div>
         

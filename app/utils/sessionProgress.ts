@@ -5,39 +5,49 @@
 
 import { getCurrentSession } from './sessionData';
 
-export type ProgressPage = 
+export type ProgressPage =
   | 'consent'
   | 'exampleDrawing'
-  | 'prepControl'
-  | 'vignetteControl'
-  | 'surveyControl'
-  | 'prepSecond'      // Second block (prestige or dominance)
-  | 'vignetteSecond'  // Second block vignette
-  | 'surveySecond'    // Second block survey
-  | 'prepThird'       // Third block (opposite of second)
-  | 'vignetteThird'   // Third block vignette
-  | 'surveyThird'     // Third block survey
+  | 'prepBaseline'
+  | 'information'
+  | 'prepControl'      // Control block
+  | 'vignetteControl'  // Control block vignette
+  | 'surveyControl'    // Control block survey
+  | 'prepFirst'        // First experimental block
+  | 'vignetteFirst'    // First experimental block vignette
+  | 'surveyFirst'      // First experimental block survey
+  | 'prepSecond'       // Second experimental block
+  | 'vignetteSecond'   // Second experimental block vignette
+  | 'surveySecond'     // Second experimental block survey
+  | 'prepThird'        // Third experimental block
+  | 'vignetteThird'    // Third experimental block vignette
+  | 'surveyThird'      // Third experimental block survey
   | 'demographics'
   | 'debriefing';
 
 // Total pages in participant flow (excluding draw pages)
-const TOTAL_PAGES = 13;
+const TOTAL_PAGES = 18;
 
 // Progress mapping for each page
 const PAGE_PROGRESS: Record<ProgressPage, number> = {
   consent: 1,
   exampleDrawing: 2,
-  prepControl: 3,
-  vignetteControl: 4,
-  surveyControl: 5,
-  prepSecond: 6,
-  vignetteSecond: 7,
-  surveySecond: 8,
-  prepThird: 9,
-  vignetteThird: 10,
-  surveyThird: 11,
-  demographics: 12,
-  debriefing: 13
+  prepBaseline: 3,
+  information: 4,
+  prepControl: 5,
+  vignetteControl: 6,
+  surveyControl: 7,
+  prepFirst: 8,
+  vignetteFirst: 9,
+  surveyFirst: 10,
+  prepSecond: 11,
+  vignetteSecond: 12,
+  surveySecond: 13,
+  prepThird: 14,
+  vignetteThird: 15,
+  surveyThird: 16,
+  demographics: 17,
+  debriefing: 18
 };
 
 /**
@@ -60,42 +70,29 @@ export function getProgressValue(page: ProgressPage): number {
 }
 
 /**
- * Get progress for a condition-specific page (control, prestige or dominance) based on session state
- * @param blockType - 'control', 'prestige' or 'dominance'
+ * Get progress for a condition-specific page (prestige, dominance, or lowStatus) based on session state
+ * @param blockType - 'prestige', 'dominance', or 'lowStatus'
  * @param pageType - 'prep', 'vignette', or 'survey'
  * @returns Progress value (0-100)
  */
-export function getConditionProgress(blockType: 'control' | 'prestige' | 'dominance', pageType: 'prep' | 'vignette' | 'survey'): number {
-  // Handle control block - it's always first
-  if (blockType === 'control') {
-    switch (pageType) {
-      case 'prep': return getProgressValue('prepControl');
-      case 'vignette': return getProgressValue('vignetteControl');
-      case 'survey': return getProgressValue('surveyControl');
-    }
-  }
-  
+export function getConditionProgress(blockType: 'prestige' | 'dominance' | 'lowStatus', pageType: 'prep' | 'vignette' | 'survey'): number {
   const session = getCurrentSession();
-  if (!session) return 0;
+  if (!session || !session.sessionOrder) return 0;
   
-  const completedBlocks = session.blocks?.length || 0;
-  const isSecondBlock = completedBlocks === 1; // After control block
-  const isThirdBlock = completedBlocks === 2; // After control and one condition block
+  // Find which position this blockType is in the session order
+  const blockPosition = session.sessionOrder.indexOf(blockType);
+  if (blockPosition === -1) return 0;
   
-  if (isSecondBlock) {
-    // This is the second block
-    switch (pageType) {
-      case 'prep': return getProgressValue('prepSecond');
-      case 'vignette': return getProgressValue('vignetteSecond');
-      case 'survey': return getProgressValue('surveySecond');
-    }
-  } else if (isThirdBlock) {
-    // This is the third block
-    switch (pageType) {
-      case 'prep': return getProgressValue('prepThird');
-      case 'vignette': return getProgressValue('vignetteThird');
-      case 'survey': return getProgressValue('surveyThird');
-    }
+  // Map position to progress page
+  const progressPositions = ['First', 'Second', 'Third'] as const;
+  const progressPosition = progressPositions[blockPosition];
+  if (!progressPosition) return 0;
+  
+  // Get the appropriate progress value
+  switch (pageType) {
+    case 'prep': return getProgressValue(`prep${progressPosition}` as ProgressPage);
+    case 'vignette': return getProgressValue(`vignette${progressPosition}` as ProgressPage);
+    case 'survey': return getProgressValue(`survey${progressPosition}` as ProgressPage);
   }
   
   return 0; // Fallback
@@ -104,10 +101,6 @@ export function getConditionProgress(blockType: 'control' | 'prestige' | 'domina
 /**
  * Get progress for survey pages based on their specific type
  */
-export function getSurveyProgress(surveyType: 'control' | 'prestige' | 'dominance'): number {
-  if (surveyType === 'control') {
-    return getProgressValue('surveyControl');
-  }
-  
+export function getSurveyProgress(surveyType: 'prestige' | 'dominance' | 'lowStatus'): number {
   return getConditionProgress(surveyType, 'survey');
 } 

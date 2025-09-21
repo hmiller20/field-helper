@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+
 import { updateSession, safeColorNamesInText, getCharacterForCondition } from "@/utils/sessionData"
 
-// Types for our survey questions
 type QuestionType = "likert";
 
 type Question = {
@@ -20,66 +20,64 @@ type Question = {
 };
 
 const baseQuestions: Question[] = [
-  // Manipulation check items
+  // Manipulation check items for low status
   {
-    id: "domManip1_p",
+    id: "domManip1_l",
     text: "[NAME] is willing to use aggressive tactics to get his way.",
     category: "manipulation",
     questionType: "likert",
   },
   {
-    id: "domManip2_p",
+    id: "domManip2_l",
     text: "Others know it is better to let [NAME] have his way.",
     category: "manipulation",
     questionType: "likert",
   },
   {
-    id: "preManip1_p",
+    id: "attnCheck6_l",
+    text: "If you are paying attention, select option six.",
+    category: "attention",
+    questionType: "likert",
+  },
+  {
+    id: "preManip1_l",
     text: "[NAME]'s unique talents and abilities are recognized by others.",
     category: "manipulation",
     questionType: "likert",
   },
   {
-    id: "preManip2_p",
+    id: "preManip2_l",
     text: "[NAME] is considered an expert on some matters by others.",
     category: "manipulation",
     questionType: "likert",
   },
   {
-    id: "statusManip1_p",
+    id: "statusManip1_l",
     text: "[NAME] has a lot of influence over others.",
     category: "manipulation",
     questionType: "likert",
   },
   {
-    id: "attnCheck2_p",
-    text: "If you are paying attention, select option two.",
-    category: "attention",
-    questionType: "likert",
-  },
-  {
-    id: "statusManip2_p",
+    id: "statusManip2_l",
     text: "[NAME] seeks out leadership opportunities regularly.",
     category: "manipulation",
     questionType: "likert",
   },
+  {
+    id: "attnCheck2_l",
+    text: "If you are paying attention, select option two.",
+    category: "attention",
+    questionType: "likert",
+  },
 ]
 
-// Remove the local colorNamesInText function and use the imported one
-// helper function to color names in text
-// function colorNamesInText(text: string) {
-//   return text
-//     .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
-//     .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
-// }
-
-export default function SurveyPrestigePage() {
+export default function SurveyLowStatusPage() {
   const [responses, setResponses] = useState<Record<string, string | number>>({})
   const router = useRouter()
 
-  // Function to get the character assigned to the prestige condition
+  // Function to get the character assigned to the lowStatus condition
   const getPersonName = (): string => {
-    return getCharacterForCondition('prestige');
+    return getCharacterForCondition('lowStatus');
   };
 
   // Create questions with the appropriate name substituted
@@ -143,7 +141,7 @@ export default function SurveyPrestigePage() {
               updateSession({ 
                 tempSurvey: responses 
               });
-              router.push('/drawPrestige');
+              router.push('/drawLowStatus');
             }}
           >
             Continue

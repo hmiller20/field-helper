@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation"
@@ -11,24 +11,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, safeColorNamesInText, getCharacterForCondition, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
+import { getCurrentSession, saveBaselineDrawing, generateSessionOrder, setSessionOrder, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
-import { capitalize } from "@/utils/capitalize";
 import { silhouetteFromCanvas } from "@/lib/silhouette";
 
 // Drawing area validation constants
 const MIN_AREA = 4600; // 4602 was the 5th percentile area in the last study (n=215)
 const MAX_AREA = 59670; // 59668 was the 95th percentile area in the last study (n=215)
 
-// Remove the local colorNamesInText function and use the imported one
-// helper function to color names in text
-// function colorNamesInText(text: string) {
-//   return text
-//     .replace(/John/g, `<span style="color: ${getNameColor("John")}; font-weight: bold;">John</span>`)
-//     .replace(/Bill/g, `<span style="color: ${getNameColor("Bill")}; font-weight: bold;">Bill</span>`);
-// }
-
-const DrawDominancePage: React.FC = () => {
+const DrawBaselinePage: React.FC = () => {
+  // New ref that stores completed shapes (each as an array of points)
   const shapesRef = useRef<{ x: number; y: number }[][]>([]);
   const [showModal, setShowModal] = useState(true);
 
@@ -39,10 +31,6 @@ const DrawDominancePage: React.FC = () => {
   const shapePointsRef = useRef<{ x: number; y: number }[]>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const session = getCurrentSession();
-
-  console.log("=== DOMINANCE PAGE LOADED ===");
-
   // Timer effect - 10 seconds like prep pages
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -51,20 +39,7 @@ const DrawDominancePage: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Function to get the modal text
-  const getModalText = (): string => {
-    const characterName = getCharacterForCondition('dominance');
-    return safeColorNamesInText(`Please draw the outline of ${characterName}, the person you just read about.`);
-  };
-
-  useEffect(() => {
-    if (!session) {
-      router.push('/consent');
-      return;
-    }
-  }, [session, router]);
-
-  // Canvas setup
+  // Adjust the canvas dimensions on mount
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -111,6 +86,7 @@ const DrawDominancePage: React.FC = () => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // Append current point to our shape points tracker and draw the line
     shapePointsRef.current.push({ x, y });
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -129,20 +105,20 @@ const DrawDominancePage: React.FC = () => {
     ctx?.beginPath();
   };
 
+  // Clear canvas function
   const clearCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Also clear stored shapes and the temporary shape points
     shapesRef.current = [];
     shapePointsRef.current = [];
   };
 
-
   const doneDrawing = async () => {
-    console.log("=== DOMINANCE DONE DRAWING CALLED ===");
-    
+    /* ------- 1. normal finish-up stuff ---------- */
     if (isDrawingRef.current) stopDrawing();
 
     const canvas = canvasRef.current;
@@ -150,11 +126,16 @@ const DrawDominancePage: React.FC = () => {
     const ctx = canvas.getContext("2d");
     ctx?.beginPath();
 
-    // Silhouette processing
+    if (shapesRef.current.length === 0) {
+      console.log("No completed shapes have been drawn.");
+      return;
+    }
+
+    // ▸ A. Silhouette processing
     const timestamp = Date.now();
-    console.log(`Starting silhouette processing in drawDominance at ${timestamp}...`);
+    console.log(`Starting silhouette processing in drawBaseline at ${timestamp}...`);
     const silhouetteResult = await silhouetteFromCanvas(canvas);
-    console.log('Silhouette result:', {
+    console.log('Baseline silhouette result:', {
       areaPixels: silhouetteResult.areaPixels,
       width: silhouetteResult.width,
       height: silhouetteResult.height,
@@ -163,7 +144,7 @@ const DrawDominancePage: React.FC = () => {
 
     const totalArea = silhouetteResult.areaPixels;
 
-    // Area validation - track violations but don't block submission
+    // ▸ Area validation - track violations but don't block submission
     if (totalArea < MIN_AREA) {
       incrementSmallViolation(); // Track small drawing violation
     }
@@ -172,14 +153,7 @@ const DrawDominancePage: React.FC = () => {
       incrementLargeViolation(); // Track large drawing violation
     }
 
-    // Use silhouette dimensions instead of vector extents
-    const extents = {
-      width: silhouetteResult.width,
-      height: silhouetteResult.height,
-      minY: 0 // Not applicable for raster approach
-    };
-
-    // Capture image
+    // ▸ B. image capture
     let imageData = "";
     if (containerRef.current) {
       const html2canvasResult = await html2canvas(containerRef.current, {
@@ -190,63 +164,43 @@ const DrawDominancePage: React.FC = () => {
       imageData = canvas.toDataURL("image/png");
     }
 
-    // Convert silhouette PNG blob to data URL
+    // ▸ C. Convert silhouette PNG blob to data URL
     const silhouetteDataUrl = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.readAsDataURL(silhouetteResult.silhouettePNG);
     });
 
-    // Update session
-    console.log("=== GETTING SESSION FROM LOCALSTORAGE ===");
+    /* ------- 2. Save baseline drawing to session ---------- */
     const session = getCurrentSession();
     if (!session) {
       router.push('/consent');
       return;
     }
-    
-    console.log("Current session:", session);
-    
-    const blocks = [...(session.blocks || [])];
-    console.log("Current blocks before adding:", blocks);
-    
-    blocks.push({
-      blockType: "dominance",
-      vignetteStartedAt: session.tempVignetteStart || Date.now(),
-      survey: session.tempSurvey || {},
-      drawing: {
-        area: totalArea,
-        maxWidth: extents.width,
-        maxHeight: extents.height,
-        verticality: silhouetteResult.verticality,
-        pngUrl: imageData,
-        silhouettePngUrl: silhouetteDataUrl,
-      },
-    });
 
-    // Update session with the new block
-    updateSession({ blocks });
-    
-    console.log("=== UPDATED SESSION ===");
-    console.log("DOMINANCE COMPLETE");
-    
-    // Debug session state
-    debugSessionState();
+    // Save baseline drawing data
+    const baselineDrawing = {
+      area: totalArea,
+      maxWidth: silhouetteResult.width,
+      maxHeight: silhouetteResult.height,
+      verticality: silhouetteResult.verticality,
+      pngUrl: imageData,
+      silhouettePngUrl: silhouetteDataUrl,
+    };
 
-    // Determine next step using helper function
-    const nextBlockType = getNextBlockType();
-    if (nextBlockType) {
-      router.push(`/prep${capitalize(nextBlockType)}`);
-    } else {
-      // All blocks completed, go to demographics
-      router.push('/demographics');
-    }
+    saveBaselineDrawing(baselineDrawing);
+
+    /* ------- 3. Generate session order for experimental conditions ---------- */
+    const sessionOrder = generateSessionOrder();
+    setSessionOrder(sessionOrder);
+
+    /* ------- 4. Navigate to information page ---------- */
+    router.push('/information');
   };
-
-  if (!session) return null;
 
   return (
     <>
+      {/* Shadcn modal that appears over the drawing area */}
       <Dialog open={showModal}>
         <DrawDialogContent className="sm:max-w-[725px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
@@ -254,7 +208,7 @@ const DrawDominancePage: React.FC = () => {
             <DialogDescription 
               className="text-lg text-black"
               dangerouslySetInnerHTML={{
-                __html: `${getModalText()} It should be a simple outline—kind of like a gingerbread man. <b>Do NOT draw a stick figure.</b> Please ask the experimenter if you have any questions. When you are finished with your drawing, press Done.`
+                __html: `Please draw the outline of a man. It should be a simple outline—kind of like a gingerbread man. <b>Do NOT draw a stick figure.</b> Please ask the experimenter if you have any questions. When you are finished with your drawing, press Done.`
               }}
             />
           </DialogHeader>
@@ -280,9 +234,6 @@ const DrawDominancePage: React.FC = () => {
         </DrawDialogContent>
       </Dialog>
 
-      {/* Area validation warning dialog */}
-
-
       <div className="h-screen flex flex-col bg-gray-200 overflow-hidden">
         {/* Container for html2canvas screenshot - takes remaining space after buttons */}
         <div className="flex-1 flex flex-col p-2 min-h-0" style={{ maxHeight: 'calc(100vh - 120px)' }}>
@@ -307,10 +258,16 @@ const DrawDominancePage: React.FC = () => {
         
         {/* Buttons fixed at bottom */}
         <div className="flex-shrink-0 p-2 flex justify-center space-x-3">
-          <button className="px-4 py-2 bg-red-500 text-white rounded font-medium text-base" onClick={clearCanvas}>
+          <button
+            className="px-4 py-2 bg-red-500 text-white rounded font-medium text-base"
+            onClick={clearCanvas}
+          >
             Clear Canvas
           </button>
-          <button className="px-4 py-2 bg-green-500 text-white rounded font-medium text-base" onClick={doneDrawing}>
+          <button
+            className="px-4 py-2 bg-green-500 text-white rounded font-medium text-base"
+            onClick={doneDrawing}
+          >
             Done
           </button>
         </div>
@@ -319,4 +276,4 @@ const DrawDominancePage: React.FC = () => {
   );
 };
 
-export default DrawDominancePage;
+export default DrawBaselinePage;

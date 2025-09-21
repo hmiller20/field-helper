@@ -17,7 +17,7 @@ const serwist = new Serwist({
       matcher: ({ url, request }) => {
         return request.destination === 'document' || 
                url.pathname.startsWith('/_next/') ||
-               url.pathname.match(/\/(consent|demographics|exampleDrawing|prepControl|prepPrestige|prepDominance|vignetteControl|vignettePrestige|vignetteDominance|drawControl|drawPrestige|drawDominance|surveyControl|surveyPrestige|surveyDominance|debriefing|experimenter)$/);
+               url.pathname.match(/\/(consent|demographics|exampleDrawing|prepBaseline|prepControl|prepPrestige|prepDominance|prepLowStatus|vignetteControl|vignettePrestige|vignetteDominance|vignetteLowStatus|drawBaseline|drawControl|drawPrestige|drawDominance|drawLowStatus|surveyControl|surveyPrestige|surveyDominance|surveyLowStatus|debriefing|experimenter)$/);
       },
       handler: new NetworkFirst({
         cacheName: "navigation-cache"

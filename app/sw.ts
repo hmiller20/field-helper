@@ -67,7 +67,7 @@ serwist.addEventListeners();
 
 // Optional: offline shell if a nav isn't cached
 serwist.setCatchHandler(async ({ event }) => {
-  if (event.request.mode === "navigate") {
+  if (event instanceof FetchEvent && event.request.mode === "navigate") {
     const cache = await caches.open(NAV_CACHE);
     const offline = await cache.match("/offline"); // add a simple /offline page if you want
     return offline || Response.error();

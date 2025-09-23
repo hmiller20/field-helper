@@ -1,33 +1,70 @@
 /// <reference lib="webworker" />
 
 import { Serwist } from "serwist";
-import { NetworkFirst } from "serwist";
+import { NetworkFirst, StaleWhileRevalidate, BackgroundSyncPlugin } from "serwist";
 
 declare const self: ServiceWorkerGlobalScope & {
   __SW_MANIFEST: Array<string | { url: string; revision: string | null }>;
 };
+
+// Create background sync plugin for write operations
+const bgSyncPlugin = new BackgroundSyncPlugin('api-queue', {
+  maxRetentionTime: 24 * 60, // Retry for up to 24 hours (in minutes)
+});
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   runtimeCaching: [
-    // Cache Next.js navigation requests specifically
+    // 1. Cache all navigation requests (pages) - no hardcoded paths needed
     {
-      matcher: ({ url, request }) => {
-        return request.destination === 'document' || 
-               url.pathname.startsWith('/_next/') ||
-               url.pathname.match(/\/(consent|demographics|information|exampleDrawing|prepBaseline|prepControl|prepPrestige|prepDominance|prepLowStatus|vignetteControl|vignettePrestige|vignetteDominance|vignetteLowStatus|drawBaseline|drawControl|drawPrestige|drawDominance|drawLowStatus|surveyControl|surveyPrestige|surveyDominance|surveyLowStatus|debriefing|experimenter)$/);
-      },
+      matcher: ({ request }) => request.mode === 'navigate',
       handler: new NetworkFirst({
-        cacheName: "navigation-cache"
+        cacheName: "navigation-cache",
+        networkTimeoutSeconds: 3,
       }),
     },
-    // Catch-all for everything else
+
+    // 2. Cache Next.js static assets (JavaScript, CSS, etc.)
     {
-      matcher: ({ url }) => url.protocol.startsWith('http'),
+      matcher: ({ url }) => url.pathname.startsWith('/_next/'),
       handler: new NetworkFirst({
-        cacheName: "offlineCache",
+        cacheName: "next-assets",
+      }),
+    },
+
+    // 3. Handle API GET requests with stale-while-revalidate
+    {
+      matcher: ({ url, request }) => {
+        return url.pathname.startsWith('/api/') && request.method === 'GET';
+      },
+      handler: new StaleWhileRevalidate({
+        cacheName: "api-cache",
+      }),
+    },
+
+    // 4. Queue API write operations (POST/PUT/PATCH/DELETE) for background sync
+    {
+      matcher: ({ url, request }) => {
+        return url.pathname.startsWith('/api/') &&
+               ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
+      },
+      handler: new NetworkFirst({
+        cacheName: "api-writes",
+        plugins: [bgSyncPlugin],
+      }),
+    },
+
+    // 5. Cache external API calls (like Supabase) with stale-while-revalidate
+    {
+      matcher: ({ url, request }) => {
+        return (url.hostname.includes('supabase.co') ||
+                url.hostname.includes('amazonaws.com')) &&
+               request.method === 'GET';
+      },
+      handler: new StaleWhileRevalidate({
+        cacheName: "external-api-cache",
       }),
     },
   ],

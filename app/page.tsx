@@ -1,6 +1,7 @@
 // app/page.tsx
-export const dynamic = 'force-static'; // important: makes this build to static HTML
+
 'use client';
+export const dynamic = 'force-static'; // important: makes this build to static HTML
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';

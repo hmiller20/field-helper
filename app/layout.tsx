@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { ServiceWorkerRegistration } from './sw-registration';
+import { Prefetcher } from './components/Prefetcher';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,6 +28,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ServiceWorkerRegistration />
+        <Prefetcher />
         {children}
       </body>
     </html>

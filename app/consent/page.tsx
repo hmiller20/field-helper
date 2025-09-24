@@ -1,5 +1,7 @@
 "use client"
 
+export const dynamic = 'force-static'; // important: makes this build to static HTML
+
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"

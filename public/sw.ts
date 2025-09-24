@@ -63,9 +63,15 @@ const serwist = new Serwist({
 // This ensures any navigation request falls back to root app shell if the specific page isn't cached
 serwist.registerRoute(
   new NavigationRoute(
-    serwist.createHandlerBoundToUrl("/")
+    serwist.createHandlerBoundToUrl("/consent")
   )
 );
+
+serwist.addToPrecacheList([
+  '/',                // keep your shell if you still use it
+  '/manifest.json',
+  '/favicon.ico',
+]);
 
 serwist.addEventListeners();
 

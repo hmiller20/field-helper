@@ -1,18 +1,43 @@
 /** @type {import('next').NextConfig} */
-// This now uses the official two-step initialization from the Serwist docs.
 import withSerwistInit from "@serwist/next";
 
 const withSerwist = withSerwistInit({
-  // IMPORTANT: The source file is now in `app/`, not `public/`.
   swSrc: "app/sw.ts",
   swDest: "public/sw.js",
-  // We still precache the essentials for our app shell.
+  // This is the definitive list of every page and asset that MUST be
+  // available offline. The service worker will not finish installing
+  // until every single one of these has been successfully cached.
   additionalPrecacheEntries: [
+    // Core Shell & PWA Assets
     "/consent",
     "/manifest.json",
     "/favicon.ico",
     "/icon-192x192.png",
     "/icon-512x512.png",
+    // All Application Pages
+    "/exampleDrawing",
+    "/information",
+    "/experimenter",
+    "/prepBaseline",
+    "/prepControl",
+    "/prepDominance",
+    "/prepPrestige",
+    "/prepLowStatus",
+    "/vignetteControl",
+    "/vignetteDominance",
+    "/vignettePrestige",
+    "/vignetteLowStatus",
+    "/surveyControl",
+    "/surveyDominance",
+    "/surveyPrestige",
+    "/surveyLowStatus",
+    "/drawBaseline",
+    "/drawControl",
+    "/drawDominance",
+    "/drawPrestige",
+    "/drawLowStatus",
+    "/demographics",
+    "/debriefing",
   ],
   disable: process.env.NODE_ENV === "development",
 });
@@ -21,5 +46,4 @@ const nextConfig = {
   // Your regular Next.js config options can go here
 };
 
-// The final export wraps your Next.js config.
 export default withSerwist(nextConfig);

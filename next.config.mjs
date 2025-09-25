@@ -1,16 +1,12 @@
 /** @type {import('next').NextConfig} */
-import withSerwist from "@serwist/next";
+// This now uses the official two-step initialization from the Serwist docs.
+import withSerwistInit from "@serwist/next";
 
-const nextConfig = {
-  // Your regular Next.js config options can go here
-};
-
-export default withSerwist({
-  swSrc: "public/sw.ts",
+const withSerwist = withSerwistInit({
+  // IMPORTANT: The source file is now in `app/`, not `public/`.
+  swSrc: "app/sw.ts",
   swDest: "public/sw.js",
-  cacheOnNavigation: true,
-  // This list precaches the core files needed for your PWA to launch offline,
-  // based on your final manifest.json.
+  // We still precache the essentials for our app shell.
   additionalPrecacheEntries: [
     "/consent",
     "/manifest.json",
@@ -19,4 +15,11 @@ export default withSerwist({
     "/icon-512x512.png",
   ],
   disable: process.env.NODE_ENV === "development",
-})(nextConfig);
+});
+
+const nextConfig = {
+  // Your regular Next.js config options can go here
+};
+
+// The final export wraps your Next.js config.
+export default withSerwist(nextConfig);

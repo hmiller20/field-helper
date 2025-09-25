@@ -1,28 +1,39 @@
-// This file should now be located at `app/sw.ts`
-import { defaultCache } from "@serwist/next/worker";
-import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist, NavigationRoute } from "serwist";
+/// <reference lib="webworker" />
 
-declare global {
-  interface WorkerGlobalScope extends SerwistGlobalConfig {
-    __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
-  }
-}
+import { Serwist, CacheFirst, NetworkFirst, ExpirationPlugin } from "serwist";
 
-declare const self: ServiceWorkerGlobalScope;
+declare const self: ServiceWorkerGlobalScope & {
+  __SW_MANIFEST: Array<string | { url: string; revision: string | null }>;
+};
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
-  navigationPreload: true,
-  // IMPORTANT: We now use the official `defaultCache` from Serwist.
-  // This handles Next.js assets (chunks, images, etc.) correctly by default.
-  runtimeCaching: defaultCache,
+  runtimeCaching: [
+    {
+      matcher: ({url}) => url.pathname.match(/\.(pdf|mjs)$/i) !== null,
+      handler: new CacheFirst({
+        cacheName: "pdf-cache",
+        plugins: [
+          new ExpirationPlugin({
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+          })
+        ]
+      }),
+    },
+    {
+      matcher: ({url}) => url.protocol.startsWith('http'),
+      handler: new NetworkFirst({
+        cacheName: "offlineCache",
+        plugins: [
+          new ExpirationPlugin({
+            maxEntries: 200,
+          })
+        ]
+      }),
+    },
+  ],
 });
-
-// We STILL add our custom NavigationRoute. This is crucial.
-// It ensures that any offline navigation falls back to our app shell (`/consent`).
-serwist.registerRoute(new NavigationRoute(serwist.createHandlerBoundToUrl("/consent")));
 
 serwist.addEventListeners();

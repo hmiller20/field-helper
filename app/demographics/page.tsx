@@ -13,7 +13,8 @@ export default function Demographics() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     age: '',
-    gender: ''
+    gender: '',
+    previousParticipation: ''
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +34,9 @@ export default function Demographics() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    // Validation: require both age and gender
-    if (!formData.age || !formData.gender) {
-      setError('Please answer both questions before continuing.');
+    // Validation: require all fields
+    if (!formData.age || !formData.gender || !formData.previousParticipation) {
+      setError('Please answer all questions before continuing.');
       return;
     }
     
@@ -59,7 +60,8 @@ export default function Demographics() {
     updateSession({ 
       demographics: {
         age: formData.age,
-        gender: formData.gender
+        gender: formData.gender,
+        previousParticipation: formData.previousParticipation
       }
     });
     
@@ -191,6 +193,27 @@ export default function Demographics() {
                       </button>
                     ))}
                   </div>
+                </div>
+              </div>
+
+              {/* Previous Participation */}
+              <div className="space-y-4">
+                <Label className="text-lg font-medium">Have you participated in this study before? You can receive candy no matter your answer.</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  {['Yes', 'No'].map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, previousParticipation: option }))}
+                      className={`px-4 py-3 rounded-lg border-2 font-medium text-base transition-all duration-200 ${
+                        formData.previousParticipation === option
+                          ? 'bg-blue-500 border-blue-500 text-white'
+                          : 'bg-white border-blue-500 text-black hover:bg-blue-50'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
                 </div>
               </div>
 

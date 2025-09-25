@@ -14,6 +14,35 @@ export default withSerwist({
   // the runtime rule in sw.ts now handles all optimized images automatically.
   additionalPrecacheEntries: [
     "/consent",
+    "/exampleDrawing",
+    "/information",
+    "/experimenter",
+    // Prep pages
+    "/prepBaseline",
+    "/prepControl",
+    "/prepDominance",
+    "/prepPrestige",
+    "/prepLowStatus",
+    // Vignette pages
+    "/vignetteControl",
+    "/vignetteDominance",
+    "/vignettePrestige",
+    "/vignetteLowStatus",
+    // Survey pages
+    "/surveyControl",
+    "/surveyDominance",
+    "/surveyPrestige",
+    "/surveyLowStatus",
+    // Drawing pages
+    "/drawBaseline",
+    "/drawControl",
+    "/drawDominance",
+    "/drawPrestige",
+    "/drawLowStatus",
+    // Final pages
+    "/demographics",
+    "/debriefing",
+    // Static assets
     "/manifest.json",
     "/favicon.ico",
     "/icon-192x192.png",

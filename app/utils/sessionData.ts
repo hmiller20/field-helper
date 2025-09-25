@@ -977,6 +977,7 @@ export function flattenSessionForSupabase(session: Session): Record<string, stri
     session_test: session.sessionTest || false,
     demographics_age: session.demographics?.age ? parseInt(session.demographics.age, 10) : null,
     demographics_gender: session.demographics?.gender || null,
+    demographics_previous_participation: session.demographics?.previousParticipation || null,
     name_color_john: session.nameColors?.John || null,
     name_color_bill: session.nameColors?.Bill || null,
     name_color_mike: session.nameColors?.Mike || null,

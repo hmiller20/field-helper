@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { v1 as uuidv1 } from "uuid"
-import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionData, assignNameColors, assignCharacterConditions, initializeViolationCounts, syncSessionsToSupabase, generateChronologicalSessionId, generateTestSessionId } from "@/utils/sessionData";
+import { updateSessionData, getSessionData, getCurrentSession, clearAllSessionData, assignNameColors, assignCharacterConditions, initializeViolationCounts, syncSessionsToSupabase, generateChronologicalSessionId, generateTestSessionId, initializeAppState } from "@/utils/sessionData";
 import { Button } from "@/components/ui/button";
 import { ToastProvider, Toast, ToastDescription, ToastViewport } from "@/components/ui/toast";
 import PDFViewer from "@/components/PDFViewer";
@@ -18,22 +18,35 @@ export default function ConsentPage() {
   const [toastOpen, setToastOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [sessionCount, setSessionCount] = useState(0)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const router = useRouter()
 
-  // Update session count on component mount and when storage changes
+  // Initialize component state properly on mount
   React.useEffect(() => {
+    // Initialize app state to handle any corrupted localStorage
+    initializeAppState();
+
+    // Ensure modal starts closed on every render
+    setIsDialogOpen(false)
+    setHasReadInfo(false)
+
     const updateSessionCount = () => {
-      const sessions = getSessionData();
-      setSessionCount(sessions.length);
+      try {
+        const sessions = getSessionData();
+        setSessionCount(sessions.length);
+      } catch (error) {
+        console.error("Error updating session count:", error);
+        setSessionCount(0); // Fallback to 0 if there's an error
+      }
     };
-    
+
     updateSessionCount();
-    
+
     // Listen for storage changes
     const handleStorageChange = () => {
       updateSessionCount();
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [])
@@ -131,12 +144,18 @@ export default function ConsentPage() {
             </p>
 
             <Dialog
+              open={isDialogOpen}
               onOpenChange={(open) => {
+                setIsDialogOpen(open)
                 if (!open) setHasReadInfo(true)
               }}
             >
               <DialogTrigger asChild>
-                <Button className="w-48 h-16 text-xl bg-[#ffeeb2] hover:bg-[#ffe699] text-black" variant="secondary">
+                <Button
+                  className="w-48 h-16 text-xl bg-[#ffeeb2] hover:bg-[#ffe699] text-black"
+                  variant="secondary"
+                  onClick={() => setIsDialogOpen(true)}
+                >
                   Consent Form
                 </Button>
               </DialogTrigger>
@@ -154,45 +173,52 @@ export default function ConsentPage() {
               className="w-48 h-16 text-xl bg-[#c1e6c1] hover:bg-[#a8dba8] text-black"
               disabled={!hasReadInfo}
               variant="secondary"
-              onClick={() => {
-                // Get the most recent session to check if it's a test
-                const sessionData = getSessionData();
-                const mostRecentSession = sessionData[sessionData.length - 1];
-                const isTestSession = mostRecentSession?.sessionTest || false;
-                
-                // Generate appropriate session ID
-                const chronologicalSessionId = isTestSession 
-                  ? generateTestSessionId() 
-                  : generateChronologicalSessionId();
-                
-                // Generate UUID for internal use
-                const internalId = uuidv1();
-                
-                console.log("=== CONSENT: Generated IDs ===");
-                console.log("Internal UUID:", internalId);
-                console.log("Chronological Session ID:", chronologicalSessionId);
-                console.log("Is test session:", isTestSession);
-                
-                // Create session with both IDs
-                updateSessionData({ 
-                  id: internalId,
-                  sessionId: chronologicalSessionId
-                });
-                
-                // Then assign name colors and character conditions
-                assignNameColors();
-                assignCharacterConditions();
-                
-                // Initialize violation counts for this session
-                initializeViolationCounts();
-                
-                // Verify what was actually stored
-                const currentSession = getCurrentSession();
-                console.log("=== CONSENT: getCurrentSession result ===", currentSession);
-                console.log("=== CONSENT: Internal ID ===", currentSession?.id);
-                console.log("=== CONSENT: Session ID ===", currentSession?.sessionId);
-                
-                router.push('/exampleDrawing');
+              onClick={async () => {
+                try {
+                  // Get the most recent session to check if it's a test
+                  const sessionData = getSessionData();
+                  const mostRecentSession = sessionData[sessionData.length - 1];
+                  const isTestSession = mostRecentSession?.sessionTest || false;
+
+                  // Generate appropriate session ID
+                  const chronologicalSessionId = isTestSession
+                    ? generateTestSessionId()
+                    : generateChronologicalSessionId();
+
+                  // Generate UUID for internal use
+                  const internalId = uuidv1();
+
+                  console.log("=== CONSENT: Generated IDs ===");
+                  console.log("Internal UUID:", internalId);
+                  console.log("Chronological Session ID:", chronologicalSessionId);
+                  console.log("Is test session:", isTestSession);
+
+                  // Create session with both IDs
+                  updateSessionData({
+                    id: internalId,
+                    sessionId: chronologicalSessionId
+                  });
+
+                  // Then assign name colors and character conditions
+                  assignNameColors();
+                  assignCharacterConditions();
+
+                  // Initialize violation counts for this session
+                  initializeViolationCounts();
+
+                  // Verify what was actually stored
+                  const currentSession = getCurrentSession();
+                  console.log("=== CONSENT: getCurrentSession result ===", currentSession);
+                  console.log("=== CONSENT: Internal ID ===", currentSession?.id);
+                  console.log("=== CONSENT: Session ID ===", currentSession?.sessionId);
+
+                  // Navigate with error handling
+                  await router.push('/exampleDrawing');
+                } catch (error) {
+                  console.error("Error in consent flow:", error);
+                  // Still try to navigate even if there was an error
+                  router.push('/exampleDrawing');
+                }
               }}
             >
               Continue

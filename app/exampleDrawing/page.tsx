@@ -11,13 +11,32 @@ import Image from "next/image"
 export default function ExampleDrawingPage() {
   const router = useRouter()
   const [canContinue, setCanContinue] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
+    // Reset navigation state on mount
+    setIsNavigating(false)
+    setCanContinue(false)
+
     const timer = setTimeout(() => {
       setCanContinue(true);
     }, 10000); // 10 seconds
     return () => clearTimeout(timer);
   }, []);
+
+  const handleContinue = async () => {
+    if (isNavigating || !canContinue) return;
+
+    setIsNavigating(true);
+
+    try {
+      await router.push('/prepBaseline');
+    } catch (error) {
+      console.error('Navigation failed:', error);
+      // Re-enable button on navigation failure
+      setIsNavigating(false);
+    }
+  };
 
   return (
     <div className="min-h-screen p-2 sm:p-4 bg-white">
@@ -56,17 +75,23 @@ export default function ExampleDrawingPage() {
           <div className="flex flex-col items-center gap-2 sm:gap-3 w-full">
             <Button
               className={`w-full max-w-[200px] sm:max-w-[240px] h-12 sm:h-14 md:h-16 text-base sm:text-lg md:text-xl bg-[#c1e6c1] text-black ${
-                canContinue ? "hover:bg-[#a8dba8]" : "cursor-not-allowed pointer-events-none"
+                canContinue && !isNavigating ? "hover:bg-[#a8dba8]" : "cursor-not-allowed"
               }`}
               variant="secondary"
-              style={{ opacity: canContinue ? 1 : 0.5 }}
-              onClick={canContinue ? () => router.push('/prepBaseline') : undefined}
+              style={{ opacity: canContinue && !isNavigating ? 1 : 0.5 }}
+              onClick={handleContinue}
+              disabled={!canContinue || isNavigating}
             >
-              Continue
+              {isNavigating ? "Loading..." : "Continue"}
             </Button>
-            {!canContinue && (
+            {!canContinue && !isNavigating && (
               <p className="text-xs sm:text-sm text-gray-500 text-center px-2">
                 The continue button will become available soon. Please review the example carefully.
+              </p>
+            )}
+            {isNavigating && (
+              <p className="text-xs sm:text-sm text-gray-500 text-center px-2">
+                Navigating to next page...
               </p>
             )}
           </div>

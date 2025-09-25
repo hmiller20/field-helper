@@ -131,6 +131,75 @@ const COMPLETED_SESSIONS_KEY = "completedSessions";
 const CURRENT_SESSION_KEY = "currentSession";
 
 /**
+ * Validate and sanitize session data to ensure it has proper structure
+ */
+export const validateAndSanitizeSession = (session: unknown): Session | null => {
+  try {
+    if (!session || typeof session !== 'object') {
+      console.warn("Invalid session: not an object");
+      return null;
+    }
+
+    const sessionObj = session as Record<string, unknown>;
+
+    // Ensure required fields exist
+    if (!sessionObj.id) {
+      console.warn("Invalid session: missing id");
+      return null;
+    }
+
+    // Sanitize and set defaults
+    const sanitized: Session = {
+      id: sessionObj.id as string,
+      sessionId: (sessionObj.sessionId as string) || undefined,
+      blocks: Array.isArray(sessionObj.blocks) ? sessionObj.blocks : [],
+      sessionOrder: Array.isArray(sessionObj.sessionOrder) ? sessionObj.sessionOrder : [],
+      baselineDrawing: sessionObj.baselineDrawing as BaselineDrawing | undefined,
+      experimenter: (sessionObj.experimenter as string) || undefined,
+      sessionNotes: (sessionObj.sessionNotes as string) || undefined,
+      demographics: (sessionObj.demographics as Record<string, string>) || undefined,
+      allResponses: (sessionObj.allResponses as Record<string, unknown>) || undefined,
+      drawingData: sessionObj.drawingData as Session['drawingData'] | undefined,
+      syncedAt: (sessionObj.syncedAt as number) || undefined,
+      syncTime: (sessionObj.syncTime as string) || undefined,
+      tempVignetteStart: (sessionObj.tempVignetteStart as number) || undefined,
+      tempSurvey: (sessionObj.tempSurvey as Record<string, string | number>) || undefined,
+      nameColors: sessionObj.nameColors as Session['nameColors'] | undefined,
+      characterAssignments: sessionObj.characterAssignments as Session['characterAssignments'] | undefined,
+      smallViolations: typeof sessionObj.smallViolations === 'number' ? sessionObj.smallViolations : 0,
+      largeViolations: typeof sessionObj.largeViolations === 'number' ? sessionObj.largeViolations : 0,
+      sessionGood: Boolean(sessionObj.sessionGood),
+      sessionTest: Boolean(sessionObj.sessionTest),
+      presentedFirst: sessionObj.presentedFirst as Session['presentedFirst'] | undefined,
+      order: sessionObj.order as Session['order'] | undefined
+    };
+
+    return sanitized;
+  } catch (error) {
+    console.error("Error validating/sanitizing session:", error);
+    return null;
+  }
+};
+
+/**
+ * Safely get and validate session data, with automatic recovery
+ */
+export const getSessionDataSafe = (): Session[] => {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const sessions = getSessionData();
+    return sessions
+      .map(session => validateAndSanitizeSession(session))
+      .filter((session): session is Session => session !== null);
+  } catch (error) {
+    console.error("Error getting session data safely:", error);
+    // If session data is corrupted, return empty array to allow app to continue
+    return [];
+  }
+};
+
+/**
  * Get the current active session from local storage.
  * Returns null if no session exists or if localStorage is not available (SSR).
  */
@@ -139,10 +208,77 @@ export const getCurrentSession = (): Session | null => {
   const data = localStorage.getItem(CURRENT_SESSION_KEY);
   if (!data) return null;
   try {
-    return JSON.parse(data) as Session;
+    const parsed = JSON.parse(data);
+    return validateAndSanitizeSession(parsed);
   } catch (error) {
     console.error("Error parsing current session from localStorage:", error);
+    // Clear corrupted data
+    localStorage.removeItem(CURRENT_SESSION_KEY);
     return null;
+  }
+};
+
+/**
+ * Recover from corrupted localStorage state
+ */
+export const recoverFromCorruptedState = (): void => {
+  if (typeof window === 'undefined') return;
+
+  console.warn("Attempting to recover from corrupted localStorage state");
+
+  try {
+    // Clear potentially corrupted keys
+    const keysToCheck = [CURRENT_SESSION_KEY, COMPLETED_SESSIONS_KEY, STORAGE_KEY];
+
+    keysToCheck.forEach(key => {
+      try {
+        const data = localStorage.getItem(key);
+        if (data) {
+          JSON.parse(data); // Test if it's valid JSON
+        }
+      } catch {
+        console.warn(`Removing corrupted key: ${key}`);
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Ensure essential keys exist with valid defaults
+    if (!localStorage.getItem(COMPLETED_SESSIONS_KEY)) {
+      localStorage.setItem(COMPLETED_SESSIONS_KEY, JSON.stringify([]));
+    }
+
+    console.log("State recovery completed");
+  } catch (error) {
+    console.error("Failed to recover from corrupted state:", error);
+  }
+};
+
+/**
+ * Initialize localStorage state safely on app startup
+ */
+export const initializeAppState = (): void => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // Test if localStorage is working
+    localStorage.setItem('test', 'test');
+    localStorage.removeItem('test');
+
+    // Check for corrupted state and recover if needed
+    const currentSession = localStorage.getItem(CURRENT_SESSION_KEY);
+    if (currentSession) {
+      try {
+        const parsed = JSON.parse(currentSession);
+        validateAndSanitizeSession(parsed);
+      } catch {
+        recoverFromCorruptedState();
+      }
+    }
+
+    console.log("App state initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize app state:", error);
+    // If localStorage is completely broken, log error but continue
   }
 };
 
@@ -151,7 +287,19 @@ export const getCurrentSession = (): Session | null => {
  */
 export const setSession = (session: Session) => {
   if (typeof window === 'undefined') return; // SSR check
-  localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(session));
+
+  try {
+    // Validate session before saving
+    const validatedSession = validateAndSanitizeSession(session);
+    if (validatedSession) {
+      localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(validatedSession));
+    } else {
+      console.error("Attempted to save invalid session data");
+    }
+  } catch (error) {
+    console.error("Failed to save session:", error);
+    recoverFromCorruptedState();
+  }
 };
 
 /**

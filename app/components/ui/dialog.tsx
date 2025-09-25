@@ -6,6 +6,45 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+// Error boundary for dialog content
+class DialogErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Dialog content error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        this.props.fallback || (
+          <div className="p-4 text-center">
+            <p className="text-red-600 mb-2">Something went wrong loading this content.</p>
+            <button
+              onClick={() => this.setState({ hasError: false })}
+              className="text-blue-600 underline"
+            >
+              Try again
+            </button>
+          </div>
+        )
+      )
+    }
+
+    return this.props.children
+  }
+}
+
 const Dialog = DialogPrimitive.Root
 
 const DialogTrigger = DialogPrimitive.Trigger
@@ -43,7 +82,9 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
-      {children}
+      <DialogErrorBoundary>
+        {children}
+      </DialogErrorBoundary>
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
@@ -68,7 +109,9 @@ const DrawDialogContent = React.forwardRef<
       )}
       {...props}
     >
-      {children}
+      <DialogErrorBoundary>
+        {children}
+      </DialogErrorBoundary>
       {/* No exit button here - removed the DialogPrimitive.Close component */}
     </DialogPrimitive.Content>
   </DialogPortal>

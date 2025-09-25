@@ -14,6 +14,8 @@ const withSerwist = withSerwistInit({
     "/favicon.ico",
     "/icon-192x192.png",
     "/icon-512x512.png",
+    "/consent-form.pdf",
+    "/debriefing-form.pdf",
     // All Application Pages
     "/exampleDrawing",
     "/information",

@@ -558,11 +558,11 @@ export async function silhouetteFromCanvas(canvas: HTMLCanvasElement): Promise<S
   const silhouetteWidth = areaPixels > 0 ? maxX - minX + 1 : 0;
   const silhouetteHeight = areaPixels > 0 ? maxY - minY + 1 : 0;
   
-  // Calculate verticality (how high up the drawing is positioned)
-  // Higher values = closer to top of canvas
-  // Invert minY so higher values = closer to top (matching legacy behavior)
-  const verticality = areaPixels > 0 ? height - minY : 0;
-  console.log(`DEBUG: Verticality calculation - height: ${height}, minY: ${minY}, verticality: ${verticality}`);
+  // Calculate verticality (distance from bottom of canvas to nearest boundary of drawing)
+  // Higher values = greater distance from bottom of canvas
+  // Use maxY (bottom edge of drawing) instead of minY (top edge)
+  const verticality = areaPixels > 0 ? height - maxY : 0;
+  console.log(`DEBUG: Verticality calculation - height: ${height}, maxY: ${maxY}, verticality: ${verticality}`);
 
   const silhouettePNG = await maskToPNG(final, width, height);
   return { silhouettePNG, areaPixels, width: silhouetteWidth, height: silhouetteHeight, verticality };

@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-import { withSerwist } from "@serwist/next";
+import withSerwist from "@serwist/next";
 
 const nextConfig = {
   // Your regular Next.js config options can go here

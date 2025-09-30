@@ -86,8 +86,7 @@ export interface Session {
   experimenter?: string;
   sessionNotes?: string;
   demographics?: Record<string, string>;
-  allResponses?: Record<string, unknown>; // All survey responses combined for data sync
-  
+
   // Drawing data (for compatibility)
   drawingData?: {
     totalArea: number;
@@ -95,11 +94,11 @@ export interface Session {
     maxHeight: number;
     drawingImageUrl?: string;
   };
-  
+
   // Sync tracking
   syncedAt?: number;
   syncTime?: string;
-  
+
   // Temporary fields used during the session
   tempVignetteStart?: number;
   tempSurvey?: Record<string, string | number>;
@@ -148,31 +147,32 @@ export const validateAndSanitizeSession = (session: unknown): Session | null => 
       return null;
     }
 
-    // Sanitize and set defaults
+    // Build sanitized session with required fields
     const sanitized: Session = {
       id: sessionObj.id as string,
-      sessionId: (sessionObj.sessionId as string) || undefined,
       blocks: Array.isArray(sessionObj.blocks) ? sessionObj.blocks : [],
       sessionOrder: Array.isArray(sessionObj.sessionOrder) ? sessionObj.sessionOrder : [],
-      baselineDrawing: sessionObj.baselineDrawing as BaselineDrawing | undefined,
-      experimenter: (sessionObj.experimenter as string) || undefined,
-      sessionNotes: (sessionObj.sessionNotes as string) || undefined,
-      demographics: (sessionObj.demographics as Record<string, string>) || undefined,
-      allResponses: (sessionObj.allResponses as Record<string, unknown>) || undefined,
-      drawingData: sessionObj.drawingData as Session['drawingData'] | undefined,
-      syncedAt: (sessionObj.syncedAt as number) || undefined,
-      syncTime: (sessionObj.syncTime as string) || undefined,
-      tempVignetteStart: (sessionObj.tempVignetteStart as number) || undefined,
-      tempSurvey: (sessionObj.tempSurvey as Record<string, string | number>) || undefined,
-      nameColors: sessionObj.nameColors as Session['nameColors'] | undefined,
-      characterAssignments: sessionObj.characterAssignments as Session['characterAssignments'] | undefined,
       smallViolations: typeof sessionObj.smallViolations === 'number' ? sessionObj.smallViolations : 0,
       largeViolations: typeof sessionObj.largeViolations === 'number' ? sessionObj.largeViolations : 0,
       sessionGood: Boolean(sessionObj.sessionGood),
-      sessionTest: Boolean(sessionObj.sessionTest),
-      presentedFirst: sessionObj.presentedFirst as Session['presentedFirst'] | undefined,
-      order: sessionObj.order as Session['order'] | undefined
+      sessionTest: Boolean(sessionObj.sessionTest)
     };
+
+    // Add optional fields only if they exist
+    if (sessionObj.sessionId) sanitized.sessionId = sessionObj.sessionId as string;
+    if (sessionObj.baselineDrawing) sanitized.baselineDrawing = sessionObj.baselineDrawing as BaselineDrawing;
+    if (sessionObj.experimenter) sanitized.experimenter = sessionObj.experimenter as string;
+    if (sessionObj.sessionNotes) sanitized.sessionNotes = sessionObj.sessionNotes as string;
+    if (sessionObj.demographics) sanitized.demographics = sessionObj.demographics as Record<string, string>;
+    if (sessionObj.drawingData) sanitized.drawingData = sessionObj.drawingData as Session['drawingData'];
+    if (sessionObj.syncedAt) sanitized.syncedAt = sessionObj.syncedAt as number;
+    if (sessionObj.syncTime) sanitized.syncTime = sessionObj.syncTime as string;
+    if (sessionObj.tempVignetteStart) sanitized.tempVignetteStart = sessionObj.tempVignetteStart as number;
+    if (sessionObj.tempSurvey) sanitized.tempSurvey = sessionObj.tempSurvey as Record<string, string | number>;
+    if (sessionObj.nameColors) sanitized.nameColors = sessionObj.nameColors as Session['nameColors'];
+    if (sessionObj.characterAssignments) sanitized.characterAssignments = sessionObj.characterAssignments as Session['characterAssignments'];
+    if (sessionObj.presentedFirst) sanitized.presentedFirst = sessionObj.presentedFirst as Session['presentedFirst'];
+    if (sessionObj.order) sanitized.order = sessionObj.order as Session['order'];
 
     return sanitized;
   } catch (error) {
@@ -181,23 +181,6 @@ export const validateAndSanitizeSession = (session: unknown): Session | null => 
   }
 };
 
-/**
- * Safely get and validate session data, with automatic recovery
- */
-export const getSessionDataSafe = (): Session[] => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const sessions = getSessionData();
-    return sessions
-      .map(session => validateAndSanitizeSession(session))
-      .filter((session): session is Session => session !== null);
-  } catch (error) {
-    console.error("Error getting session data safely:", error);
-    // If session data is corrupted, return empty array to allow app to continue
-    return [];
-  }
-};
 
 /**
  * Get the current active session from local storage.
@@ -319,17 +302,32 @@ export const getCompletedSessions = (): Session[] => {
 
 /**
  * Add a completed session to the completed sessions array.
+ * Returns true if successful, false if it failed.
  */
-export const addCompletedSession = (session: Session) => {
-  if (typeof window === 'undefined') return; // SSR check
-  const completedSessions = getCompletedSessions();
-  completedSessions.push(session);
-  localStorage.setItem(COMPLETED_SESSIONS_KEY, JSON.stringify(completedSessions));
-  
-  // Clear the current session since it's now completed
-  localStorage.removeItem(CURRENT_SESSION_KEY);
-  
-  console.log(`Session ${session.id} added to completed sessions. Total completed: ${completedSessions.length}`);
+export const addCompletedSession = (session: Session): boolean => {
+  if (typeof window === 'undefined') return false; // SSR check
+
+  try {
+    const completedSessions = getCompletedSessions();
+    completedSessions.push(session);
+
+    // Try to stringify first to catch errors before writing
+    const serialized = JSON.stringify(completedSessions);
+    localStorage.setItem(COMPLETED_SESSIONS_KEY, serialized);
+
+    // Clear the current session since it's now completed
+    localStorage.removeItem(CURRENT_SESSION_KEY);
+
+    console.log(`Session ${session.id} added to completed sessions. Total completed: ${completedSessions.length}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to add completed session:', error);
+    // Check if it's a quota exceeded error
+    if (error instanceof Error && error.name === 'QuotaExceededError') {
+      console.error('localStorage quota exceeded! Cannot save session.');
+    }
+    return false;
+  }
 };
 
 /**
@@ -394,14 +392,6 @@ export const getSessionData = (): Session[] => {
   return allSessions;
 };
 
-/**
- * Save the array of session data objects to local storage.
- * @deprecated Use addCompletedSession instead for new sessions
- */
-export const setSessionData = (data: Session[]) => {
-  if (typeof window === 'undefined') return; // SSR check
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-};
 
 /**
  * Clear all session data from local storage after successful upload.
@@ -539,44 +529,6 @@ export const saveBaselineDrawing = (baselineDrawing: BaselineDrawing) => {
   console.log(`Baseline drawing saved with area: ${baselineDrawing.area}`);
 };
 
-/**
- * Convert Session data to format suitable for data syncing.
- * Flattens the blocks structure and extracts key data points.
- */
-export const prepareSessionForSync = (session: Session): Session => {
-  // Create consolidated responses object from all blocks
-  const allResponses: Record<string, unknown> = {};
-  
-  session.blocks.forEach((block) => {
-    Object.entries(block.survey).forEach(([key, value]) => {
-      // Add to consolidated responses with block prefix
-      allResponses[`${block.blockType}_${key}`] = value;
-    });
-  });
-
-  // Find drawing data for all blocks
-  const drawings = session.blocks.map(block => ({
-    blockType: block.blockType,
-    area: block.drawing.area,
-    maxWidth: block.drawing.maxWidth,
-    maxHeight: block.drawing.maxHeight,
-    pngUrl: block.drawing.pngUrl,
-    vignetteStartedAt: block.vignetteStartedAt,
-  }));
-
-  // Calculate total drawing area across all blocks
-  const totalDrawingArea = session.blocks.reduce((sum, block) => sum + block.drawing.area, 0);
-
-  return {
-    ...session,
-    // Include all survey responses for easy querying
-    allResponses,
-    drawings,
-    totalDrawingArea,
-    syncTime: new Date().toISOString(),
-    syncedAt: Date.now(),
-  } as Session;
-};
 
 /**
  * Get the next block type that should be completed based on current session state.
@@ -618,44 +570,6 @@ export const isSessionComplete = (): boolean => {
   return requiredBlocks.every(blockType => completedBlockTypes.includes(blockType));
 };
 
-/**
- * Validate that the session has the proper structure for baseline + three experimental blocks.
- * Useful for debugging and ensuring data integrity.
- */
-export const validateSessionStructure = (session: Session): boolean => {
-  try {
-    // Check basic structure
-    if (!session.id || !Array.isArray(session.blocks)) {
-      console.error('Session missing basic structure');
-      return false;
-    }
-
-    // Check that we don't have more than 3 experimental blocks
-    if (session.blocks.length > 3) {
-      console.error('Session has more than 3 experimental blocks');
-      return false;
-    }
-
-    // Check for duplicate block types
-    const blockTypes = session.blocks.map(b => b.blockType);
-    const uniqueBlockTypes = Array.from(new Set(blockTypes));
-    if (blockTypes.length !== uniqueBlockTypes.length) {
-      console.error('Session has duplicate block types');
-      return false;
-    }
-
-    // If we have experimental blocks, ensure sessionOrder is set
-    if (session.blocks.length > 0 && !session.sessionOrder) {
-      console.error('Session has experimental blocks but no sessionOrder set');
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error validating session structure:', error);
-    return false;
-  }
-};
 
 /**
  * Debug function to log current session state and block completion status.
@@ -900,39 +814,6 @@ export const getResearcherSessions = (): ResearcherSession[] => {
   }
 };
 
-/**
- * Export researcher time tracking data to JSON string for download
- */
-export const exportResearcherData = (): string => {
-  const sessions = getResearcherSessions();
-  const currentResearcher = getCurrentResearcher();
-  
-  const allSessions = [...sessions];
-  if (currentResearcher) {
-    allSessions.push({
-      ...currentResearcher,
-      signOutTime: currentResearcher.signOutTime || Date.now(),
-      note: currentResearcher.signOutTime ? "" : "Currently signed in"
-    });
-  }
-  
-  // Convert to CSV-like format for easy Excel import
-  const csvData = allSessions.map(session => {
-    const duration = (session.signOutTime || Date.now()) - session.signInTime;
-    const hours = (duration / (1000 * 60 * 60)).toFixed(2);
-    
-    return {
-      researcherName: session.researcherName,
-      date: session.date,
-      signInTime: new Date(session.signInTime).toLocaleString(),
-      signOutTime: session.signOutTime ? new Date(session.signOutTime).toLocaleString() : "Still signed in",
-      durationHours: hours,
-      sessionId: session.id
-    };
-  });
-  
-  return JSON.stringify(csvData, null, 2);
-};
 
 /**
  * Clear all researcher session data

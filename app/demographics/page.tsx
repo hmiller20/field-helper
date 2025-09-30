@@ -34,52 +34,67 @@ export default function Demographics() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    // Validation: require all fields
-    if (!formData.age || !formData.gender || !formData.previousParticipation) {
-      setError('Please answer all questions before continuing.');
-      return;
-    }
-    
-    // Validate age range
-    const ageNum = parseInt(formData.age);
-    if (ageNum < 18 || ageNum > 120) {
-      setError('Please enter an age between 18 and 120.');
-      return;
-    }
-    
-    console.log('Demographics submitted:', formData);
-    
-    const session = getCurrentSession();
-    if (!session) {
-      console.error('No current session found');
-      router.push('/consent');
-      return;
-    }
-    
-    // Always update the current session first to make sure that all data is preserved
-    updateSession({ 
-      demographics: {
-        age: formData.age,
-        gender: formData.gender,
-        previousParticipation: formData.previousParticipation
+
+    try {
+      // Validation: require all fields
+      if (!formData.age || !formData.gender || !formData.previousParticipation) {
+        setError('Please answer all questions before continuing.');
+        return;
       }
-    });
-    
-    // Get the updated session to ensure we have all the latest data
-    const finalSession = getCurrentSession();
-    if (!finalSession) {
-      console.error('Failed to get updated session');
-      return;
+
+      // Validate age range
+      const ageNum = parseInt(formData.age);
+      if (ageNum < 18 || ageNum > 120) {
+        setError('Please enter an age between 18 and 120.');
+        return;
+      }
+
+      console.log('Demographics submitted:', formData);
+
+      const session = getCurrentSession();
+      if (!session) {
+        console.error('No current session found');
+        router.push('/consent');
+        return;
+      }
+
+      // Always update the current session first to make sure that all data is preserved
+      updateSession({
+        demographics: {
+          age: formData.age,
+          gender: formData.gender,
+          previousParticipation: formData.previousParticipation
+        }
+      });
+
+      // Get the updated session to ensure we have all the latest data
+      const finalSession = getCurrentSession();
+      if (!finalSession) {
+        console.error('Failed to get updated session - navigating anyway');
+        router.push('/debriefing');
+        return;
+      }
+
+      // Check if this is a complete session (has all 3 blocks)
+      if (isSessionComplete()) {
+        console.log('Session is complete, adding to completed sessions');
+        const success = addCompletedSession(finalSession);
+        if (!success) {
+          console.error('Failed to save completed session, but continuing to debriefing');
+          // Still navigate even if save failed - the session data is already in localStorage
+        }
+      }
+
+      // Always navigate to debriefing page regardless of errors
+      router.push('/debriefing');
+    } catch (error) {
+      console.error('Error in demographics handleSubmit:', error);
+      // Navigate anyway to avoid getting stuck
+      setError('An error occurred, but continuing...');
+      setTimeout(() => {
+        router.push('/debriefing');
+      }, 1000);
     }
-    
-    // Check if this is a complete session (has all 3 blocks)
-    if (isSessionComplete()) {
-      console.log('Session is complete, adding to completed sessions');
-      addCompletedSession(finalSession);
-    }
-    
-    // Navigate to debriefing page
-    router.push('/debriefing');
   };
 
   return (

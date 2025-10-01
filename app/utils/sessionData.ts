@@ -151,7 +151,9 @@ export const validateAndSanitizeSession = (session: unknown): Session | null => 
     const sanitized: Session = {
       id: sessionObj.id as string,
       blocks: Array.isArray(sessionObj.blocks) ? sessionObj.blocks : [],
-      sessionOrder: Array.isArray(sessionObj.sessionOrder) ? sessionObj.sessionOrder : [],
+      sessionOrder: Array.isArray(sessionObj.sessionOrder) && sessionObj.sessionOrder.length > 0
+        ? sessionObj.sessionOrder
+        : [],
       smallViolations: typeof sessionObj.smallViolations === 'number' ? sessionObj.smallViolations : 0,
       largeViolations: typeof sessionObj.largeViolations === 'number' ? sessionObj.largeViolations : 0,
       sessionGood: Boolean(sessionObj.sessionGood),
@@ -272,13 +274,9 @@ export const setSession = (session: Session) => {
   if (typeof window === 'undefined') return; // SSR check
 
   try {
-    // Validate session before saving
-    const validatedSession = validateAndSanitizeSession(session);
-    if (validatedSession) {
-      localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(validatedSession));
-    } else {
-      console.error("Attempted to save invalid session data");
-    }
+    // Save session directly - no need to validate data we're writing
+    // Validation only needed when reading potentially corrupted data from localStorage
+    localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(session));
   } catch (error) {
     console.error("Failed to save session:", error);
     recoverFromCorruptedState();
@@ -537,18 +535,18 @@ export const saveBaselineDrawing = (baselineDrawing: BaselineDrawing) => {
 export const getNextBlockType = (): BlockType | null => {
   const session = getCurrentSession();
   if (!session) return null;
-  
-  if (!session.sessionOrder) return null;
-  
+
+  if (!session.sessionOrder || session.sessionOrder.length === 0) return null;
+
   const completedBlockTypes = session.blocks.map(block => block.blockType);
-  
+
   // Follow the randomized session order
   for (const blockType of session.sessionOrder) {
     if (!completedBlockTypes.includes(blockType)) {
       return blockType;
     }
   }
-  
+
   // All blocks completed
   return null;
 };

@@ -126,14 +126,22 @@ export default function ConsentPage() {
       <div className="min-h-screen relative flex items-center justify-center p-4 bg-background">
         <div className="absolute top-4 right-4 flex flex-col gap-2">
           <ResearcherSignIn />
-          <Button
-            onClick={handleSync}
-            variant="secondary"
-            className="text-sm bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 shadow-sm transition-colors"
-            disabled={isUploading || sessionCount === 0}
-          >
-            {isUploading ? "Uploading..." : `Upload Local Data (${sessionCount})`}
-          </Button>
+          <div className="flex items-center gap-2">
+            {sessionCount > 0 && (
+              <div className="relative bg-red-600 text-white px-4 py-2 rounded-l-md flex items-center shadow-lg">
+                <span className="text-sm font-semibold whitespace-nowrap">Upload before collecting more data.</span>
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full w-0 h-0 border-t-[20px] border-t-transparent border-b-[20px] border-b-transparent border-l-[20px] border-l-red-600"></div>
+              </div>
+            )}
+            <Button
+              onClick={handleSync}
+              variant="secondary"
+              className="text-sm bg-white text-gray-800 border border-gray-300 hover:bg-gray-100 shadow-sm transition-colors"
+              disabled={isUploading || sessionCount === 0}
+            >
+              {isUploading ? "Uploading..." : `Upload Local Data (${sessionCount})`}
+            </Button>
+          </div>
         </div>
 
         <Card className="w-full max-w-2xl">

@@ -41,11 +41,11 @@ const DrawingPage: React.FC = () => {
   const shapePointsRef = useRef<{ x: number; y: number }[]>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Timer effect - 10 seconds like prep pages
+  // Timer effect - 5 seconds like prep pages
   useEffect(() => {
     const timer = setTimeout(() => {
       setCanContinue(true);
-    }, 10000); // 10 seconds
+    }, 5000); // 5 seconds
     return () => clearTimeout(timer);
   }, []);
 

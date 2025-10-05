@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession, updateSession, getNextBlockType, debugSessionState, safeColorNamesInText, getCharacterForCondition, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, debugSessionState, safeColorNamesInText, getCharacterForCondition, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 import { silhouetteFromCanvas } from "@/lib/silhouette";
@@ -201,7 +201,7 @@ const DrawPrestigePage: React.FC = () => {
     
     console.log("Current session:", session);
     
-    const blocks = [...(session.blocks || [])];
+    const blocks = [...(session.blocks || [])]; // creates copy of blocks array
     console.log("Current blocks before adding:", blocks);
     
     blocks.push({
@@ -216,19 +216,36 @@ const DrawPrestigePage: React.FC = () => {
         pngUrl: imageData,
         silhouettePngUrl: silhouetteDataUrl,
       },
-    });
+    }); // pushes new block to the local blocks array
 
     // Update session with the new block
     updateSession({ blocks });
-    
+
     console.log("=== UPDATED SESSION ===");
     console.log("PRESTIGE COMPLETE");
-    
+
     // Debug session state
     debugSessionState();
 
-    // Determine next step using helper function
-    const nextBlockType = getNextBlockType();
+    // Determine next step using local session data to avoid Firefox race condition
+    // Don't call getCurrentSession() again - use the session we already have
+    const updatedSession = { ...session, blocks };
+    const completedBlockTypes = updatedSession.blocks.map(b => b.blockType);
+
+    // Find next block from sessionOrder
+    let nextBlockType = null;
+    for (const blockType of updatedSession.sessionOrder) {
+      if (!completedBlockTypes.includes(blockType)) {
+        nextBlockType = blockType;
+        break;
+      }
+    }
+
+    console.log("=== NEXT BLOCK DETERMINATION ===");
+    console.log("Completed blocks:", completedBlockTypes);
+    console.log("Session order:", updatedSession.sessionOrder);
+    console.log("Next block type:", nextBlockType);
+
     if (nextBlockType) {
       router.push(`/prep${capitalize(nextBlockType)}`);
     } else {

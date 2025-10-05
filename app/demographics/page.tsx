@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Label } from '../components/ui/label';
 import { Progress } from '../components/ui/progress';
 import { getProgressValue } from '../utils/sessionProgress';
-import { updateSession, getCurrentSession, addCompletedSession, isSessionComplete } from '../utils/sessionData';
+import { updateSession, getCurrentSession, addCompletedSession } from '../utils/sessionData';
 
 export default function Demographics() {
   const router = useRouter();
@@ -67,22 +67,40 @@ export default function Demographics() {
         }
       });
 
-      // Get the updated session to ensure we have all the latest data
-      const finalSession = getCurrentSession();
-      if (!finalSession) {
-        console.error('Failed to get updated session - navigating anyway');
-        router.push('/debriefing');
-        return;
-      }
+      // Use local session data to avoid Firefox race condition
+      // Don't call getCurrentSession() again - use the session we already have
+      const finalSession = {
+        ...session,
+        demographics: {
+          age: formData.age,
+          gender: formData.gender,
+          previousParticipation: formData.previousParticipation
+        }
+      };
+
+      console.log('=== DEMOGRAPHICS: Final session data ===');
+      console.log('Session ID:', finalSession.id);
+      console.log('Blocks completed:', finalSession.blocks?.length);
+      console.log('Demographics:', finalSession.demographics);
 
       // Check if this is a complete session (has all 3 blocks)
-      if (isSessionComplete()) {
+      // Use local session data to check completion
+      const hasBaseline = !!finalSession.baselineDrawing;
+      const completedBlockTypes = finalSession.blocks?.map(b => b.blockType) || [];
+      const requiredBlocks: Array<'prestige' | 'dominance' | 'lowStatus'> = ['prestige', 'dominance', 'lowStatus'];
+      const isComplete = hasBaseline && requiredBlocks.every(blockType => completedBlockTypes.includes(blockType));
+
+      if (isComplete) {
         console.log('Session is complete, adding to completed sessions');
         const success = addCompletedSession(finalSession);
         if (!success) {
           console.error('Failed to save completed session, but continuing to debriefing');
           // Still navigate even if save failed - the session data is already in localStorage
         }
+      } else {
+        console.warn('Session is incomplete - not adding to completed sessions');
+        console.log('Has baseline:', hasBaseline);
+        console.log('Completed blocks:', completedBlockTypes);
       }
 
       // Always navigate to debriefing page regardless of errors

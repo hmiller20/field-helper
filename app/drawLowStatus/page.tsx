@@ -11,7 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getCurrentSession, updateSession, getNextBlockType, safeColorNamesInText, getCharacterForCondition, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
+import { getCurrentSession, updateSession, safeColorNamesInText, getCharacterForCondition, incrementSmallViolation, incrementLargeViolation } from "@/utils/sessionData";
 import html2canvas from "html2canvas";
 import { capitalize } from "@/utils/capitalize";
 import { silhouetteFromCanvas } from "@/lib/silhouette";
@@ -202,14 +202,32 @@ const DrawLowStatusPage: React.FC = () => {
     });
 
     /* ------- 3. Clear temporary data and persist session ---------- */
-    updateSession({ 
-      blocks, 
+    updateSession({
+      blocks,
       tempVignetteStart: undefined,
       tempSurvey: undefined
     });
 
     /* ------- 4. Navigate to next condition or demographics ---------- */
-    const nextBlockType = getNextBlockType();
+    // Determine next step using local session data to avoid Firefox race condition
+    // Don't call getCurrentSession() again - use the session we already have
+    const updatedSession = { ...session, blocks };
+    const completedBlockTypes = updatedSession.blocks.map(b => b.blockType);
+
+    // Find next block from sessionOrder
+    let nextBlockType = null;
+    for (const blockType of updatedSession.sessionOrder) {
+      if (!completedBlockTypes.includes(blockType)) {
+        nextBlockType = blockType;
+        break;
+      }
+    }
+
+    console.log("=== NEXT BLOCK DETERMINATION ===");
+    console.log("Completed blocks:", completedBlockTypes);
+    console.log("Session order:", updatedSession.sessionOrder);
+    console.log("Next block type:", nextBlockType);
+
     if (nextBlockType) {
       router.push(`/prep${capitalize(nextBlockType)}`);
     } else {

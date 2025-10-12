@@ -31,6 +31,7 @@ const MAX_AREA = 59670; // 59668 was the 95th percentile area in the last study 
 const DrawDominancePage: React.FC = () => {
   const shapesRef = useRef<{ x: number; y: number }[][]>([]);
   const [showModal, setShowModal] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const [canContinue, setCanContinue] = useState(false);
   const router = useRouter();
@@ -141,9 +142,17 @@ const DrawDominancePage: React.FC = () => {
 
 
   const doneDrawing = async () => {
+    // Prevent multiple simultaneous calls
+    if (isProcessing) {
+      console.log("=== DOMINANCE: Already processing, ignoring click ===");
+      return;
+    }
+
     console.log("=== DOMINANCE DONE DRAWING CALLED ===");
+    setIsProcessing(true);
     
-    if (isDrawingRef.current) stopDrawing();
+    try {
+      if (isDrawingRef.current) stopDrawing();
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -252,11 +261,16 @@ const DrawDominancePage: React.FC = () => {
     console.log("Session order:", updatedSession.sessionOrder);
     console.log("Next block type:", nextBlockType);
 
-    if (nextBlockType) {
-      router.push(`/prep${capitalize(nextBlockType)}`);
-    } else {
-      // All blocks completed, go to demographics
-      router.push('/demographics');
+      if (nextBlockType) {
+        router.push(`/prep${capitalize(nextBlockType)}`);
+      } else {
+        // All blocks completed, go to demographics
+        router.push('/demographics');
+      }
+    } catch (error) {
+      console.error("=== DOMINANCE: Error in doneDrawing ===", error);
+      // Re-enable button on error
+      setIsProcessing(false);
     }
   };
 
@@ -323,13 +337,36 @@ const DrawDominancePage: React.FC = () => {
         </div>
         
         {/* Buttons fixed at bottom */}
-        <div className="flex-shrink-0 p-2 flex justify-center space-x-3">
-          <button className="px-4 py-2 bg-red-500 text-white rounded font-medium text-base" onClick={clearCanvas}>
-            Clear Canvas
-          </button>
-          <button className="px-4 py-2 bg-green-500 text-white rounded font-medium text-base" onClick={doneDrawing}>
-            Done
-          </button>
+        <div className="flex-shrink-0 p-2 flex flex-col items-center space-y-2">
+          <div className="flex justify-center space-x-3">
+            <button 
+              className={`px-4 py-2 rounded font-medium text-base ${
+                isProcessing 
+                  ? "bg-gray-400 cursor-not-allowed text-white" 
+                  : "bg-red-500 hover:bg-red-600 text-white"
+              }`}
+              onClick={clearCanvas}
+              disabled={isProcessing}
+            >
+              Clear Canvas
+            </button>
+            <button 
+              className={`px-4 py-2 rounded font-medium text-base ${
+                isProcessing 
+                  ? "bg-gray-400 cursor-not-allowed text-white" 
+                  : "bg-green-500 hover:bg-green-600 text-white"
+              }`}
+              onClick={doneDrawing}
+              disabled={isProcessing}
+            >
+              {isProcessing ? "Processing..." : "Done"}
+            </button>
+          </div>
+          {isProcessing && (
+            <p className="text-sm text-gray-600 text-center">
+              The next page will load soon. We appreciate your patience.
+            </p>
+          )}
         </div>
       </div>
     </>

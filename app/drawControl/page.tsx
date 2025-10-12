@@ -33,6 +33,7 @@ const DrawingPage: React.FC = () => {
   // New ref that stores completed shapes (each as an array of points)
   const shapesRef = useRef<{ x: number; y: number }[][]>([]);
   const [showModal, setShowModal] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const [canContinue, setCanContinue] = useState(false);
   const router = useRouter();
@@ -128,8 +129,18 @@ const DrawingPage: React.FC = () => {
   };
 
   const doneDrawing = async () => {
-    /* ------- 1. normal finish-up stuff ---------- */
-    if (isDrawingRef.current) stopDrawing();
+    // Prevent multiple simultaneous calls
+    if (isProcessing) {
+      console.log("=== CONTROL: Already processing, ignoring click ===");
+      return;
+    }
+
+    console.log("=== CONTROL DONE DRAWING CALLED ===");
+    setIsProcessing(true);
+    
+    try {
+      /* ------- 1. normal finish-up stuff ---------- */
+      if (isDrawingRef.current) stopDrawing();
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -222,11 +233,16 @@ const DrawingPage: React.FC = () => {
       setPresentedFirst(firstCondition);
     }
 
-    /* ------- 4. persist & navigate ---------- */
-    updateSession({ blocks, order });
+      /* ------- 4. persist & navigate ---------- */
+      updateSession({ blocks, order });
 
-    const firstBlock = order[0];
-    router.push(`/prep${capitalize(firstBlock)}`);
+      const firstBlock = order[0];
+      router.push(`/prep${capitalize(firstBlock)}`);
+    } catch (error) {
+      console.error("=== CONTROL: Error in doneDrawing ===", error);
+      // Re-enable button on error
+      setIsProcessing(false);
+    }
   };
 
   // Function to get the modal text with conditional "redraw" styling for second block
@@ -297,19 +313,36 @@ const DrawingPage: React.FC = () => {
         </div>
         
         {/* Buttons fixed at bottom */}
-        <div className="flex-shrink-0 p-2 flex justify-center space-x-3">
-          <button
-            className="px-4 py-2 bg-red-500 text-white rounded font-medium text-base"
-            onClick={clearCanvas}
-          >
-            Clear Canvas
-          </button>
-          <button
-            className="px-4 py-2 bg-green-500 text-white rounded font-medium text-base"
-            onClick={doneDrawing}
-          >
-            Done
-          </button>
+        <div className="flex-shrink-0 p-2 flex flex-col items-center space-y-2">
+          <div className="flex justify-center space-x-3">
+            <button
+              className={`px-4 py-2 rounded font-medium text-base ${
+                isProcessing 
+                  ? "bg-gray-400 cursor-not-allowed text-white" 
+                  : "bg-red-500 hover:bg-red-600 text-white"
+              }`}
+              onClick={clearCanvas}
+              disabled={isProcessing}
+            >
+              Clear Canvas
+            </button>
+            <button
+              className={`px-4 py-2 rounded font-medium text-base ${
+                isProcessing 
+                  ? "bg-gray-400 cursor-not-allowed text-white" 
+                  : "bg-green-500 hover:bg-green-600 text-white"
+              }`}
+              onClick={doneDrawing}
+              disabled={isProcessing}
+            >
+              {isProcessing ? "Processing..." : "Done"}
+            </button>
+          </div>
+          {isProcessing && (
+            <p className="text-sm text-gray-600 text-center">
+              The next page will load soon. We appreciate your patience.
+            </p>
+          )}
         </div>
       </div>
     </>
